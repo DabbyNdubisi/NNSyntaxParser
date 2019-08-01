@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		4E11139722D6E5DC0011B052 /* GloveExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E11139622D6E5DC0011B052 /* GloveExtractor.swift */; };
-		4E11139922D6EB1A0011B052 /* PTBDependencyExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E11139822D6EB1A0011B052 /* PTBDependencyExtractor.swift */; };
 		4E50132722F1F9730058404C /* ParserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E50132622F1F9730058404C /* ParserModel.swift */; };
 		4E50132A22F26E9A0058404C /* ConversionHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E50132922F26E9A0058404C /* ConversionHelpers.swift */; };
 		4E50133522F277430058404C /* MLParserModel.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4E50133422F277430058404C /* MLParserModel.mlmodel */; };
@@ -137,7 +136,6 @@
 
 /* Begin PBXFileReference section */
 		4E11139622D6E5DC0011B052 /* GloveExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GloveExtractor.swift; sourceTree = "<group>"; };
-		4E11139822D6EB1A0011B052 /* PTBDependencyExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTBDependencyExtractor.swift; sourceTree = "<group>"; };
 		4E50132622F1F9730058404C /* ParserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ParserModel.swift; path = ../../../../../../System/Volumes/Data/Users/dabeluchindubisi/Developer/LanguageParseModels/Sources/LanguageParseModels/ParserModel.swift; sourceTree = "<group>"; };
 		4E50132922F26E9A0058404C /* ConversionHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConversionHelpers.swift; path = "../../../../../../System/Volumes/Data/Users/dabeluchindubisi/Developer/NNSyntaxParser/NNSyntaxParser/Model Conversion/ConversionHelpers.swift"; sourceTree = "<group>"; };
 		4E50133422F277430058404C /* MLParserModel.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MLParserModel.mlmodel; sourceTree = "<group>"; };
@@ -406,7 +404,6 @@
 			children = (
 				4ECC78EC22D6CF0D00737904 /* UDEnglishExtractor.swift */,
 				4E11139622D6E5DC0011B052 /* GloveExtractor.swift */,
-				4E11139822D6EB1A0011B052 /* PTBDependencyExtractor.swift */,
 			);
 			path = Extractors;
 			sourceTree = "<group>";
@@ -616,7 +613,6 @@
 				4E55EFB922EA7DF900B56AC7 /* DataStructures.pb.swift in Sources */,
 				4E55EFAF22EA7DF900B56AC7 /* NeuralNetwork.pb.swift in Sources */,
 				4E55EF1B22EA736200B56AC7 /* Downloader.swift in Sources */,
-				4E11139922D6EB1A0011B052 /* PTBDependencyExtractor.swift in Sources */,
 				4E55EFA522EA7DF900B56AC7 /* Gazetteer.pb.swift in Sources */,
 				4E55EFA722EA7DF900B56AC7 /* WordTagger.pb.swift in Sources */,
 				4E55EF2022EA736200B56AC7 /* ModelSaver.swift in Sources */,

@@ -30,8 +30,6 @@ print("Extracting files from downloaded UD archive...")
 UDEnglishExtractor().extract(from: DataRequirement.udTreebank.file.name)
 print("Extracting files from downloaded Glove archive...")
 GloveExtractor().extract(from: DataRequirement.glove.file.name)
-print("Extracting files from downloaded PTB archive...")
-PTBDependencyExtractor().extract(from: DataRequirement.depPennTreebank.file.name)
 print("Extraction completed")
 
 print("populating token embeddings...")
@@ -53,18 +51,18 @@ for i in (1...3).reversed() {
 }
 
 // MARK: Model training
-//let trainer = TFParseTrainer(serializer: serializer,
-//                           explorationEpochThreshold: 1,
-//                           explorationProbability: 0.9,
-//                           featureProvider: featureProvider,
-//                           model: savedModel ?? TFParserModel(embeddings: vocabularyEmbeddings.embedding))
-//let startDate = Date()
-//print("beginning training...")
-//print("loading train examples...")
-//let trainExamples = UDReader.readTrainData()
-//print("training model with \(trainExamples.count) examples...")
-//trainer.fasterTrain(examples: trainExamples, batchSize: 100, startEpoch: (savedEpoch ?? 0) + 1, epochs: 3)
-//print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
+let trainer = TFParseTrainer(serializer: serializer,
+                           explorationEpochThreshold: 1,
+                           explorationProbability: 0.9,
+                           featureProvider: featureProvider,
+                           model: savedModel ?? TFParserModel(embeddings: vocabularyEmbeddings.embedding))
+let startDate = Date()
+print("beginning training...")
+print("loading train examples...")
+let trainExamples = UDReader.readTrainData()
+print("training model with \(trainExamples.count) examples...")
+trainer.fasterTrain(examples: trainExamples, batchSize: 100, startEpoch: (savedEpoch ?? 0) + 1, epochs: 3)
+print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
 
 // MARK: - Model testing
 extension TFParserModel: ParserModel {
@@ -100,17 +98,22 @@ let accuracy = test(
 )
 print("testing done. Accuracy: \(accuracy * 100.0)%")
 
-//print("Saving final trained model")
-//try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
-//print("Model saved...")
-//print("Done.")
-
+let shouldSaveFinalModel = false
+if shouldSaveFinalModel {
+    print("Saving final trained model")
+    try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
+    print("Model saved...")
+    print("Done.")
+}
 
 // MARK: - model conversion
-//let converter = MLParserModelConverter(model: savedModel!)
-//let converted = try! converter.convertToMLModel()
-//let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
-//try! converted.write(to: downloadsURL, options: .atomic)
+let shouldConvert = false
+if shouldConvert {
+    let converter = MLParserModelConverter(model: savedModel!)
+    let converted = try! converter.convertToMLModel()
+    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
+    try! converted.write(to: downloadsURL, options: .atomic)
+}
 
 // MARK: - test converted model
 extension MLParserModel: ParserModel {

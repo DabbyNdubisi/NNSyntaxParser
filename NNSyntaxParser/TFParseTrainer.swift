@@ -282,7 +282,7 @@ class TFParseTrainer {
     }
 }
 
-// MARK: - Dynamic oracle
+// MARK: - Dynamic oracle for training
 extension ParserAutomata {
     /// implementation of a dynamic oracle
     func correctTransition(goldArcs: [Dependency?]) -> [Transition] {
