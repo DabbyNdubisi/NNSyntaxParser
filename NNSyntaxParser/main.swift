@@ -8,6 +8,8 @@
 
 import Foundation
 import TensorFlow
+import CoreML
+import NaturalLanguage
 
 // Check if data requirements are present
 print("Checking data requirements...")
@@ -39,10 +41,10 @@ print("token embeddings populated")
 let featureProvider = vocabularyEmbeddings.featureProvider
 let serializer = ModelSerializer()
 
-var savedModel: ParserModel?
+var savedModel: TFParserModel?
 var savedEpoch: Int?
 for i in (1...3).reversed() {
-    let modelName = ParseTrainer.savedModelName(epoch: i)
+    let modelName = TFParseTrainer.savedModelName(epoch: i)
     if serializer.modelExists(name: modelName) {
         savedModel = try! serializer.loadModel(name: modelName)
         savedEpoch = i
@@ -50,12 +52,12 @@ for i in (1...3).reversed() {
     }
 }
 
-let trainer = ParseTrainer(serializer: serializer,
-                           explorationEpochThreshold: 1,
-                           explorationProbability: 0.9,
-                           featureProvider: featureProvider,
-                           model: savedModel ?? ParserModel(embeddings: vocabularyEmbeddings.embedding))
-
+// MARK: Model training
+//let trainer = TFParseTrainer(serializer: serializer,
+//                           explorationEpochThreshold: 1,
+//                           explorationProbability: 0.9,
+//                           featureProvider: featureProvider,
+//                           model: savedModel ?? TFParserModel(embeddings: vocabularyEmbeddings.embedding))
 //let startDate = Date()
 //print("beginning training...")
 //print("loading train examples...")
@@ -63,152 +65,68 @@ let trainer = ParseTrainer(serializer: serializer,
 //print("training model with \(trainExamples.count) examples...")
 //trainer.fasterTrain(examples: trainExamples, batchSize: 100, startEpoch: (savedEpoch ?? 0) + 1, epochs: 3)
 //print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
-//
-print("testing model...")
-print("loading test examples...")
-let testExamples = UDReader.readTestData().shuffled()
-print("testing model with \(testExamples.count) examples...")
-let accuracy = trainer.test(examples: testExamples)
-print("testing done. Accuracy: \(accuracy * 100.0)%")
-//
-//print("Saving final trained model")
-//try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
-//print("Model saved...")
-//
-//print("Done.")
 
-
-// MARK: - model conversion
-import CoreML
-import NaturalLanguage
-
-//let converter = MLParserModelConverter(model: savedModel!)
-//let converted = try! converter.convertToMLModel()
-//let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
-//try! converted.write(to: downloadsURL, options: .atomic)
-
-//extension TransitionFeatureProvider {
-//    func mlfeatures(state: ParserAutomata, sentence: String) -> MLParserModelInput {
-//        let feats = self.features(for: state, sentence: sentence)
-//        let array = try! MLMultiArray(feats)
-//        return MLParserModelInput(parseState: array)
-//    }
-//}
-//
-//class Parser {
-//    private let rootPrefix = "<ROOT>"
-//    private let model: MLParserModel
-//    private let featureProvider: TransitionFeatureProvider
-//    private let tagger: NLTagger = NLTagger(tagSchemes: [.lexicalClass])
-//
-//    init(model: MLParserModel, featureProvider: TransitionFeatureProvider) {
-//        self.featureProvider = featureProvider
-//        self.model = model
-//    }
-//
-//    func parse(sentence: String) -> Parse {
-//        guard let rootPrefixRange = sentence.range(of: rootPrefix) else {
-//            return parse(sentence: "\(rootPrefix) \(sentence)")
-//        }
-//
-//        let range = sentence.range(of: sentence.suffix(from: rootPrefixRange.upperBound))!
-//        tagger.string = sentence
-//        let rootToken = Token(i: 0, sentenceRange: rootPrefixRange, posTag: .root)
-//        let buffer =
-//            tagger.tags(in: range, unit: .word, scheme: .lexicalClass, options: [.omitWhitespace]).enumerated().map({ Token(i: $0.offset + 1, sentenceRange: $0.element.1, posTag: POSTag(nlTag: $0.element.0!)! ) })
-//        var state = ParserAutomata(rootToken: rootToken, buffer: buffer)
-//
-//        while !state.isTerminal {
-//            let valids = state.validTransitions()
-//            let prediction = try! model.prediction(input: featureProvider.mlfeatures(state: state, sentence: sentence))
-//            let bestPrediction = valids.max(by: {
-//                prediction.labelProbabilities[Int64($0.rawValue)]! < prediction.labelProbabilities[Int64($1.rawValue)]!
-//            })!
-//            state.apply(transition: bestPrediction)
-//        }
-//
-//        return state.parse
-//    }
-//}
-//
-//let parser = Parser(model: try! MLParserModel(), featureProvider: featureProvider)
-//
-//func test(examples: [ParseExample]) -> Float {
-//    var results = [Float]()
-//    for example in examples {
-//        let answer = parser.parse(sentence: example.sentence)
-//        let accuracy = Float(answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head && $0.element?.relationship == example.goldArcs[$0.offset]?.relationship }).count) / Float(answer.heads.count)
-//        results.append(accuracy)
-//    }
-//
-//    return results.reduce(0, +) / Float(results.count)
-//}
-//let convertedAccuracy = test(examples: testExamples)
-//print("testing converted done. Accuracy: \(convertedAccuracy * 100.0)%")
-// 21.9% (TF model test)
-// 23.946053% (converted)
-//testing done. Accuracy: 52.958836%
-//2019-07-28 14:37:15.624664-0400 NNSyntaxParser[31205:939577] Metal API Validation Enabled
-//2019-07-28 14:37:15.656151-0400 NNSyntaxParser[31205:946592] flock failed to lock maps file: errno = 35
-//2019-07-28 14:37:15.656823-0400 NNSyntaxParser[31205:946592] flock failed to lock maps file: errno = 35
-//testing converted done. Accuracy: 21.453232%
-
-// MARK: - testing layers
-//let testExamples = UDReader.readTestData().shuffled()
-extension TransitionFeatureProvider {
-    func mlfeatures(state: ParserAutomata, sentence: String) -> MLParserModelInput {
-        let feats = self.features(for: state, sentence: sentence)
-        let array = try! MLMultiArray(feats)
-        return MLParserModelInput(parseState: array)
+// MARK: - Model testing
+extension TFParserModel: ParserModel {
+    func transitionProbabilities(for features: [Int32]) throws -> [Int : Float] {
+        let embeddingsInput = EmbeddingInput(indices: Tensor<Int32>(ShapedArray<Int32>(shape: [1, features.count], scalars: features)))
+        let prediction = self(embeddingsInput)
+        return prediction[0].scalars.enumerated().reduce([Int: Float]()) {
+            var result = $0
+            result[$1.offset] = $1.element
+            return result
+        }
     }
 }
 
-class Parser {
-    private let rootPrefix = "<ROOT>"
-    private let model: MLParserModel
-    private let featureProvider: TransitionFeatureProvider
-    private let tagger: NLTagger = NLTagger(tagSchemes: [.lexicalClass])
-
-    init(model: MLParserModel, featureProvider: TransitionFeatureProvider) {
-        self.featureProvider = featureProvider
-        self.model = model
-    }
-
-    func parse(sentence: String) -> Parse {
-        guard let rootPrefixRange = sentence.range(of: rootPrefix) else {
-            return parse(sentence: "\(rootPrefix) \(sentence)")
-        }
-
-        let range = sentence.range(of: sentence.suffix(from: rootPrefixRange.upperBound))!
-        tagger.string = sentence
-        let rootToken = Token(i: 0, sentenceRange: rootPrefixRange, posTag: .root)
-        let buffer =
-            tagger.tags(in: range, unit: .word, scheme: .lexicalClass, options: [.omitWhitespace]).enumerated().map({ Token(i: $0.offset + 1, sentenceRange: $0.element.1, posTag: POSTag(nlTag: $0.element.0!)! ) })
-        var state = ParserAutomata(rootToken: rootToken, buffer: buffer)
-
-        while !state.isTerminal {
-            let valids = state.validTransitions()
-            let prediction = try! model.prediction(input: featureProvider.mlfeatures(state: state, sentence: sentence))
-            let bestPrediction = valids.max(by: {
-                prediction.labelProbabilities[Int64($0.rawValue)]! < prediction.labelProbabilities[Int64($1.rawValue)]!
-            })!
-            state.apply(transition: bestPrediction)
-        }
-        return state.parse
-    }
-}
-
-let parser = Parser(model: MLParserModel(), featureProvider: featureProvider)
-func test(examples: [ParseExample]) -> Float {
+func test(parser: Parser, examples: [ParseExample]) -> Float {
     var results = [Float]()
     for example in examples {
-        let answer = parser.parse(sentence: example.sentence)
+        let answer = try! parser.parse(sentence: example.sentence)
         let accuracy = Float(answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head && $0.element?.relationship == example.goldArcs[$0.offset]?.relationship }).count) / Float(answer.heads.count)
         results.append(accuracy)
     }
 
     return results.reduce(0, +) / Float(results.count)
 }
-//parser.parse(sentence: testExamples[0].sentence)
-let convertedAccuracy = test(examples: testExamples)
+
+print("testing model...")
+print("loading test examples...")
+let testExamples = UDReader.readTestData().shuffled()
+print("testing model with \(testExamples.count) examples...")
+let accuracy = test(
+    parser: Parser(model: savedModel!, featureProvider: featureProvider),
+    examples: testExamples
+)
+print("testing done. Accuracy: \(accuracy * 100.0)%")
+
+//print("Saving final trained model")
+//try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
+//print("Model saved...")
+//print("Done.")
+
+
+// MARK: - model conversion
+//let converter = MLParserModelConverter(model: savedModel!)
+//let converted = try! converter.convertToMLModel()
+//let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
+//try! converted.write(to: downloadsURL, options: .atomic)
+
+// MARK: - test converted model
+extension MLParserModel: ParserModel {
+    func transitionProbabilities(for features: [Int32]) throws -> [Int : Float] {
+        let arrayInput = try MLMultiArray(features)
+        let prediction = try self.prediction(input: MLParserModelInput(parseState: arrayInput))
+        return (0..<numLabels).reduce([Int:Float]()) {
+            var result = $0
+            result[$1] = prediction.outputTransitionLogits[[NSNumber(value: $1)]].floatValue
+            return result
+        }
+    }
+}
+
+let convertedAccuracy = test(
+    parser: Parser(model: MLParserModel(), featureProvider: featureProvider),
+    examples: testExamples
+)
 print("testing converted done. Accuracy: \(convertedAccuracy * 100.0)%")

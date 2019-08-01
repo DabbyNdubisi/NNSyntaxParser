@@ -11,7 +11,28 @@ import TensorFlow
 import SwiftProtobuf
 
 struct MLParserModelConverter {
-    let model: ParserModel
+    private enum LayerName: String, RawRepresentable {
+        case input = "parseState"
+        case expand2d = "parse_state_expanded"
+        case embedding = "embedding"
+        case flatten = "flatten_reshape"
+        // Hidden layer 1
+        case splitHidden1 = "split_hidden_layer_1"
+        case splitHidden1_nw = "split_hidden_layer_1_nw"
+        case splitHidden1_nt = "split_hidden_layer_1_nt"
+        case splitHidden1_nl = "split_hidden_layer_1_nl"
+        case denseHidden1_nw = "nw_dense_hidden_layer_1"
+        case denseHidden1_nt = "nt_dense_hidden_layer_1"
+        case denseHidden1_nl = "nl_dense_hidden_layer_1"
+        case addHidden1_nwtl = "(nw+nt+nl)_add_dense_hidden_layer_1"
+        case biasHidden1 = "bias_hidden_layer_1"
+        case preActivationReshapeHidden1 = "pre_activation_reshape_hidden_layer_1"
+        case activationHidden1 = "cube_activation_hidden_layer_1"
+        // Output Layer
+        case output = "outputTransitionLogits"
+    }
+    
+    let model: TFParserModel
     
     func convertToMLModel() throws -> Data {
         var modelBuilder = CoreML_Specification_Model()
@@ -19,13 +40,13 @@ struct MLParserModelConverter {
         modelBuilder.specificationVersion = 4
         modelBuilder.description_p = makeDescription()
         modelBuilder.isUpdatable = false
-        modelBuilder.neuralNetworkClassifier = makeNeuralNetworkClassifier()
+        modelBuilder.neuralNetwork = makeNeuralNetwork()
         return try modelBuilder.serializedData()
     }
     
     // MARK: - NeuralNetworkClassifier
-    func makeNeuralNetworkClassifier() -> CoreML_Specification_NeuralNetworkClassifier {
-        var nnBuilder = CoreML_Specification_NeuralNetworkClassifier()
+    func makeNeuralNetwork() -> CoreML_Specification_NeuralNetwork {
+        var nnBuilder = CoreML_Specification_NeuralNetwork()
         // layers
         var layers = [[CoreML_Specification_NeuralNetworkLayer]]()
         layers.append(makeExpandLayer())
@@ -36,13 +57,6 @@ struct MLParserModelConverter {
         nnBuilder.layers = layers.flatMap({ $0 })
 
         nnBuilder.arrayInputShapeMapping = .exactArrayMapping
-
-        // class labels vector
-        var classVector = CoreML_Specification_Int64Vector()
-        classVector.vector = [Int64](Int64(0) ..< Int64(numLabels))
-        nnBuilder.int64ClassLabels = classVector
-
-        nnBuilder.labelProbabilityLayerName = nnBuilder.layers.last!.name
         return nnBuilder
     }
     
@@ -52,52 +66,42 @@ struct MLParserModelConverter {
         builder.input = makeInputFeaturesDescription()
         builder.output = makeOutputFeatureDescription()
         builder.metadata = makeMetadata()
-        builder.predictedFeatureName = "classLabel"
-        builder.predictedProbabilitiesName = "labelProbabilities"
         return builder
     }
     
     private func makeInputFeaturesDescription() -> [CoreML_Specification_FeatureDescription] {
-        typealias InputFeature = (name: String, description: String)
+        typealias InputFeature = (name: String, description: String, type: CoreML_Specification_FeatureType.OneOf_Type)
         let inputFeatures: [InputFeature] = [
-            ("parseState", "features of the current automata state")
+            (LayerName.input.rawValue,
+             "features of the current automata state",
+             .multiArrayType({
+                var arrayType = CoreML_Specification_ArrayFeatureType()
+                arrayType.dataType = .int32
+                arrayType.shape = [Int64(n_Features)]
+                return arrayType }())
+            )
         ]
         
-        return inputFeatures.map({
-            var builder = CoreML_Specification_FeatureDescription()
-            builder.name = $0.name
-            builder.shortDescription = $0.description
-            var arrayType = CoreML_Specification_ArrayFeatureType()
-            arrayType.dataType = .int32
-            arrayType.shape = [Int64(n_Features)]
-            var featureType = CoreML_Specification_FeatureType()
-            featureType.type = .multiArrayType(arrayType)
-            builder.type = featureType
-            return builder
-        })
+        return inputFeatures.map {
+           makeFeatureDescription(name: $0.name, shortDescription: $0.description, type: $0.type)
+        }
     }
     
     private func makeOutputFeatureDescription() -> [CoreML_Specification_FeatureDescription] {
         typealias OutputFeature = (name: String, description: String, type: CoreML_Specification_FeatureType.OneOf_Type)
         let outputFeatures: [OutputFeature] = [
-            ("classLabel", "the next transition that the parser should apply to the current state", .int64Type(CoreML_Specification_Int64FeatureType())),
-            ("labelProbabilities",
-             "the probabilities of every possible transition",
-             .dictionaryType({
-                var dict = CoreML_Specification_DictionaryFeatureType()
-                dict.int64KeyType = CoreML_Specification_Int64FeatureType()
-                return dict}())
+            (LayerName.output.rawValue,
+             "the logits distribution of all transition labels",
+             .multiArrayType({
+                var arrayType = CoreML_Specification_ArrayFeatureType()
+                arrayType.dataType = .float32
+                arrayType.shape = [Int64(numLabels)]
+                return arrayType}())
             )
         ]
 
         return outputFeatures.map {
-            var builder = CoreML_Specification_FeatureDescription()
-            builder.name = $0.name
-            builder.shortDescription = $0.description
-            var featureType = CoreML_Specification_FeatureType()
-            featureType.type = $0.type
-            builder.type = featureType
-            return builder
+            makeFeatureDescription(name: $0.name, shortDescription: $0.description, type: $0.type)
         }
     }
 
@@ -116,9 +120,9 @@ private extension MLParserModelConverter {
         var expandLayer = CoreML_Specification_ExpandDimsLayerParams()
         expandLayer.axes = [1, 2]
         return [nnLayer(
-            name: "parseState_expanded",
-            inputNames: ["parseState"],
-            outputNames: ["parseState_expanded"],
+            name: LayerName.expand2d,
+            inputNames: [LayerName.input],
+            outputNames: [LayerName.expand2d],
             layer: .expandDims(expandLayer),
             inputDimensions: [[n_Features]],
             outputDimensions: [[n_Features, 1, 1]]
@@ -129,14 +133,12 @@ private extension MLParserModelConverter {
         var embeddingLayer = CoreML_Specification_EmbeddingNDLayerParams()
         embeddingLayer.vocabSize = UInt64(totalVocabularySize)
         embeddingLayer.embeddingSize = UInt64(embeddingDimension)
-        var weights = CoreML_Specification_WeightParams()
-        weights.floatValue = model.embeddingLayer.embeddings.transposed().flattened().scalars
-        embeddingLayer.weights = weights
+        embeddingLayer.weights = makeWeightParams(weights: model.embeddingLayer.embeddings.transposed())
         
         return [nnLayer(
-            name: "embedding",
-            inputNames: ["parseState_expanded"],
-            outputNames: ["embedding"],
+            name: LayerName.embedding,
+            inputNames: [LayerName.expand2d],
+            outputNames: [LayerName.embedding],
             layer: .embeddingNd(embeddingLayer),
             inputDimensions: [[n_Features, 1, 1]],
             outputDimensions: [[n_Features, 1, embeddingDimension]]
@@ -148,9 +150,9 @@ private extension MLParserModelConverter {
         reshape.targetShape = [1, 1, Int64(n_Features * embeddingDimension)]
         
         return [nnLayer(
-            name: "flatten_reshape",
-            inputNames: ["embedding"],
-            outputNames: ["flatten_reshape"],
+            name: LayerName.flatten,
+            inputNames: [LayerName.embedding],
+            outputNames: [LayerName.flatten],
             layer: .reshapeStatic(reshape),
             inputDimensions: [[n_Features, 1, embeddingDimension]],
             outputDimensions: [[1, 1, n_Features * embeddingDimension]]
@@ -163,9 +165,9 @@ private extension MLParserModelConverter {
             var splitLayer = CoreML_Specification_SplitNDLayerParams()
             splitLayer.axis = -1
             splitLayer.splitSizes = [
-                UInt64(w_WeightDimension[0]),
-                UInt64(t_WeightDimension[0]),
-                UInt64(l_WeightDimension[0])
+                UInt64(n_wFeatures * embeddingDimension),
+                UInt64(n_tFeatures * embeddingDimension),
+                UInt64(n_lFeatures * embeddingDimension)
             ]
             splitLayer.numSplits = UInt64(splitLayer.splitSizes.count)
             let output = [
@@ -174,9 +176,9 @@ private extension MLParserModelConverter {
                 [1, 1, n_lFeatures * embeddingDimension]
             ]
             return nnLayer(
-                name: "feature_split",
-                inputNames: ["flatten_reshape"],
-                outputNames: ["n_wFeature_embeddings", "n_tFeature_embeddings", "n_lFeature_embeddings"],
+                name: LayerName.splitHidden1,
+                inputNames: [LayerName.flatten],
+                outputNames: [LayerName.splitHidden1_nw, LayerName.splitHidden1_nt, LayerName.splitHidden1_nl],
                 layer: .splitNd(splitLayer),
                 inputDimensions: [[1, 1, n_Features * embeddingDimension]],
                 outputDimensions: output
@@ -184,151 +186,126 @@ private extension MLParserModelConverter {
         }
         
         // n_w Inner Product layer
-        var nWInnerProductLayer = CoreML_Specification_InnerProductLayerParams()
-        nWInnerProductLayer.inputChannels = UInt64(n_wFeatures * embeddingDimension)
-        nWInnerProductLayer.outputChannels = UInt64(dh)
-        var w_weights = CoreML_Specification_WeightParams()
-        w_weights.floatValue = model.parseLayer.wordWeights.transposed().flattened().scalars
-        nWInnerProductLayer.weights = w_weights
-        let nnNWInnerProductLayer = nnLayer(
-            name: "n_wHiddenLayer_1",
-            inputNames: ["n_wFeature_embeddings"],
-            outputNames: ["n_wHiddenLayer_1"],
-            layer: .innerProduct(nWInnerProductLayer),
-            inputDimensions: [[1, 1, n_wFeatures * embeddingDimension]],
-            outputDimensions: [[1, 1, dh]]
-        )
+        func makeNwDenseLayer() -> CoreML_Specification_NeuralNetworkLayer {
+            let innerProductLayer = makeInnerProductLayer(numInput: n_wFeatures * embeddingDimension, numOutput: dh, weights: model.parseLayer.wordWeights.transposed())
+            
+            return nnLayer(
+                name: LayerName.denseHidden1_nw,
+                inputNames: [LayerName.splitHidden1_nw],
+                outputNames: [LayerName.denseHidden1_nw],
+                layer: .innerProduct(innerProductLayer),
+                inputDimensions: [[1, 1, n_wFeatures * embeddingDimension]],
+                outputDimensions: [[1, 1, dh]]
+            )
+        }
         
         // n_t InnerProduct layer
-        var nTInnerProductLayer = CoreML_Specification_InnerProductLayerParams()
-        nTInnerProductLayer.inputChannels = UInt64(n_tFeatures * embeddingDimension)
-        nTInnerProductLayer.outputChannels = UInt64(dh)
-        var t_weights = CoreML_Specification_WeightParams()
-        t_weights.floatValue = model.parseLayer.tagWeights.transposed().flattened().scalars
-        nTInnerProductLayer.weights = t_weights
-        let nnNTInnerProductLayer = nnLayer(
-            name: "n_tHiddenLayer_1",
-            inputNames: ["n_tFeature_embeddings"],
-            outputNames: ["n_tHiddenLayer_1"],
-            layer: .innerProduct(nTInnerProductLayer),
-            inputDimensions: [[1, 1, n_tFeatures * embeddingDimension]],
-            outputDimensions: [[1, 1, dh]]
-        )
+        func makeNtDenseLayer() -> CoreML_Specification_NeuralNetworkLayer {
+            let innerProductLayer = makeInnerProductLayer(numInput: n_tFeatures * embeddingDimension, numOutput: dh, weights: model.parseLayer.tagWeights.transposed())
+            
+            return nnLayer(
+                name: LayerName.denseHidden1_nt,
+                inputNames: [LayerName.splitHidden1_nt],
+                outputNames: [LayerName.denseHidden1_nt],
+                layer: .innerProduct(innerProductLayer),
+                inputDimensions: [[1, 1, n_tFeatures * embeddingDimension]],
+                outputDimensions: [[1, 1, dh]]
+            )
+        }
         
         // n_l InnerProduct layer
-        var nLInnerProductLayer = CoreML_Specification_InnerProductLayerParams()
-        nLInnerProductLayer.inputChannels = UInt64(n_lFeatures * embeddingDimension)
-        nLInnerProductLayer.outputChannels = UInt64(dh)
-        var l_weights = CoreML_Specification_WeightParams()
-        l_weights.floatValue = model.parseLayer.labelWeights.transposed().flattened().scalars
-        nLInnerProductLayer.weights = l_weights
-        let nnNLInnerProductLayer = nnLayer(
-            name: "n_lHiddenLayer_1",
-            inputNames: ["n_lFeature_embeddings"],
-            outputNames: ["n_lHiddenLayer_1"],
-            layer: .innerProduct(nLInnerProductLayer),
-            inputDimensions: [[1, 1, n_lFeatures * embeddingDimension]],
-            outputDimensions: [[1, 1, dh]]
-        )
+        func makeNlDenseLayer() -> CoreML_Specification_NeuralNetworkLayer {
+            let innerProductLayer = makeInnerProductLayer(numInput: n_lFeatures * embeddingDimension, numOutput: dh, weights: model.parseLayer.labelWeights.transposed())
+            
+            return nnLayer(
+                name: LayerName.denseHidden1_nl,
+                inputNames: [LayerName.splitHidden1_nl],
+                outputNames: [LayerName.denseHidden1_nl],
+                layer: .innerProduct(innerProductLayer),
+                inputDimensions: [[1, 1, n_lFeatures * embeddingDimension]],
+                outputDimensions: [[1, 1, dh]]
+            )
+        }
         
         // Add layer
-        let nnAddLayer = nnLayer(
-            name: "(n_w+n_t+n_l)HiddenLayer_1",
-            inputNames: ["n_wHiddenLayer_1", "n_tHiddenLayer_1", "n_lHiddenLayer_1"],
-            outputNames: ["(n_w+n_t+n_l)HiddenLayer_1"],
-            layer: .add(CoreML_Specification_AddLayerParams()),
-            inputDimensions: [[1, 1, dh], [1, 1, dh], [1, 1, dh]],
-            outputDimensions: [[1, 1, dh]]
-        )
+        func makeAddLayer() -> CoreML_Specification_NeuralNetworkLayer {
+            return nnLayer(
+                name: LayerName.addHidden1_nwtl,
+                inputNames: [LayerName.denseHidden1_nw, LayerName.denseHidden1_nt, LayerName.denseHidden1_nl],
+                outputNames: [LayerName.addHidden1_nwtl],
+                layer: .add(CoreML_Specification_AddLayerParams()),
+                inputDimensions: [[1, 1, dh], [1, 1, dh], [1, 1, dh]],
+                outputDimensions: [[1, 1, dh]]
+            )
+        }
         
         // Bias Layer
-        var biasLayer = CoreML_Specification_BiasLayerParams()
-        biasLayer.shape = [1, 1, UInt64(dh)]
-        var bias_Weights = CoreML_Specification_WeightParams()
-        bias_Weights.floatValue = model.parseLayer.bias.transposed().scalars
-        biasLayer.bias = bias_Weights
-        let nnBiasLayer = nnLayer(
-            name: "bias_HiddenLayer_1",
-            inputNames: ["(n_w+n_t+n_l)HiddenLayer_1"],
-            outputNames: ["bias_HiddenLayer_1"],
-            layer: .bias(biasLayer),
-            inputDimensions: [[1, 1, dh]],
-            outputDimensions: [[1, 1, dh]]
-        )
+        func makeBiasLayer() -> CoreML_Specification_NeuralNetworkLayer {
+            var biasLayer = CoreML_Specification_BiasLayerParams()
+            biasLayer.shape = [1, 1, UInt64(dh)]
+            biasLayer.bias = makeWeightParams(weights: model.parseLayer.bias.transposed())
+            
+            return nnLayer(
+                name: LayerName.biasHidden1,
+                inputNames: [LayerName.addHidden1_nwtl],
+                outputNames: [LayerName.biasHidden1],
+                layer: .bias(biasLayer),
+                inputDimensions: [[1, 1, dh]],
+                outputDimensions: [[1, 1, dh]]
+            )
+        }
         
-        var biasReshape = CoreML_Specification_SqueezeLayerParams()
-        biasReshape.squeezeAll = true
-        let nnBiasReshape = nnLayer(
-            name: "bias_reshape_HiddenLayer_1",
-            inputNames: ["bias_HiddenLayer_1"],
-            outputNames: ["bias_reshape_HiddenLayer_1"],
-            layer: .squeeze(biasReshape),
-            inputDimensions: [[1, 1, dh]],
-            outputDimensions: [[dh]]
-        )
+        func makePreActivationReshapeLayer() -> CoreML_Specification_NeuralNetworkLayer {
+            var biasReshape = CoreML_Specification_SqueezeLayerParams()
+            biasReshape.squeezeAll = true
+            
+            return nnLayer(
+                name: LayerName.preActivationReshapeHidden1,
+                inputNames: [LayerName.biasHidden1],
+                outputNames: [LayerName.preActivationReshapeHidden1],
+                layer: .squeeze(biasReshape),
+                inputDimensions: [[1, 1, dh]],
+                outputDimensions: [[dh]]
+            )
+        }
         
         // cube layer
-        var cubeLayer = CoreML_Specification_UnaryFunctionLayerParams()
-        cubeLayer.alpha = 3
-        cubeLayer.type = .power
-        let nnCubeActivationLayer = nnLayer(
-            name: "cube_activation_HiddenLayer_1",
-            inputNames: ["bias_reshape_HiddenLayer_1"],
-            outputNames: ["cube_activation_HiddenLayer_1"],
-            layer: .unary(cubeLayer),
-            inputDimensions: [[dh]],
-            outputDimensions: [[dh]]
-        )
+        func makeActivationlayer() -> CoreML_Specification_NeuralNetworkLayer {
+            var cubeLayer = CoreML_Specification_UnaryFunctionLayerParams()
+            cubeLayer.alpha = 3
+            cubeLayer.type = .power
+            return nnLayer(
+                name: LayerName.activationHidden1,
+                inputNames: [LayerName.preActivationReshapeHidden1],
+                outputNames: [LayerName.activationHidden1],
+                layer: .unary(cubeLayer),
+                inputDimensions: [[dh]],
+                outputDimensions: [[dh]]
+            )
+        }
         
         return [
             makeSplitLayer(),
-            nnNWInnerProductLayer,
-            nnNTInnerProductLayer,
-            nnNLInnerProductLayer,
-            nnAddLayer,
-            nnBiasLayer,
-            nnBiasReshape,
-            nnCubeActivationLayer,
+            makeNwDenseLayer(),
+            makeNtDenseLayer(),
+            makeNlDenseLayer(),
+            makeAddLayer(),
+            makeBiasLayer(),
+            makePreActivationReshapeLayer(),
+            makeActivationlayer(),
         ]
     }
 
     func makeOutputLayer() -> [CoreML_Specification_NeuralNetworkLayer] {
-        var innerProductLayer = CoreML_Specification_InnerProductLayerParams()
-        innerProductLayer.inputChannels = UInt64(dh)
-        innerProductLayer.outputChannels = UInt64(numLabels)
-        var weights = CoreML_Specification_WeightParams()
-        weights.floatValue = model.outputLayer.weight.transposed().flattened().scalars
-        innerProductLayer.weights = weights
-        var bias = CoreML_Specification_WeightParams()
-        bias.floatValue = model.outputLayer.bias.transposed().flattened().scalars
-        innerProductLayer.bias = bias
+        let innerProductLayer = makeInnerProductLayer(numInput: dh, numOutput: numLabels, weights: model.outputLayer.weight.transposed(), bias: model.outputLayer.bias.transposed())
         
         return [nnLayer(
-            name: "labelProbabilities",
-            inputNames: ["cube_activation_HiddenLayer_1"],
-            outputNames: ["labelProbabilities"],
+            name: LayerName.output,
+            inputNames: [LayerName.activationHidden1],
+            outputNames: [LayerName.output],
             layer: .innerProduct(innerProductLayer),
             inputDimensions: [[dh]],
             outputDimensions: [[numLabels]]
         )]
-    }
-    
-    // MARK: - Layer creation helpers
-    private func nnLayer(name: String, inputNames: [String], outputNames: [String], layer: CoreML_Specification_NeuralNetworkLayer.OneOf_Layer, inputDimensions: [[Int]], outputDimensions: [[Int]]) -> CoreML_Specification_NeuralNetworkLayer {
-        var nnLayer = CoreML_Specification_NeuralNetworkLayer()
-        nnLayer.name = name
-        nnLayer.input = inputNames
-        nnLayer.output = outputNames
-        nnLayer.layer = layer
-        nnLayer.inputTensor = inputDimensions.map({ layerDimension(dimension: $0) })
-        nnLayer.outputTensor = outputDimensions.map({ layerDimension(dimension: $0) })
-        return nnLayer
-    }
-    
-    private func layerDimension(dimension: [Int]) -> CoreML_Specification_Tensor {
-        var tensor = CoreML_Specification_Tensor()
-        tensor.dimValue = dimension.map({ Int64($0) })
-        tensor.rank = UInt32(dimension.count)
-        return tensor
     }
 }

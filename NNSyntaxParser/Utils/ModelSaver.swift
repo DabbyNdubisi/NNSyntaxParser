@@ -16,14 +16,14 @@ struct ModelSerializer {
         self.location = location
     }
     
-    func save(model: ParserModel, to name: String) throws {
+    func save(model: TFParserModel, to name: String) throws {
         let encodedData = try JSONEncoder().encode(model)
         try encodedData.write(to: location.appendingPathComponent(name), options: .atomic)
     }
     
-    func loadModel(name: String) throws -> ParserModel {
+    func loadModel(name: String) throws -> TFParserModel {
         let decodedData = try Data(contentsOf: location.appendingPathComponent(name))
-        return try JSONDecoder().decode(ParserModel.self, from: decodedData)
+        return try JSONDecoder().decode(TFParserModel.self, from: decodedData)
     }
     
     func modelExists(name: String) -> Bool {
