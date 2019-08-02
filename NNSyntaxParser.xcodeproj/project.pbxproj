@@ -11,6 +11,7 @@
 		4E50132722F1F9730058404C /* ParserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E50132622F1F9730058404C /* ParserModel.swift */; };
 		4E50132A22F26E9A0058404C /* ConversionHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E50132922F26E9A0058404C /* ConversionHelpers.swift */; };
 		4E50133522F277430058404C /* MLParserModel.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4E50133422F277430058404C /* MLParserModel.mlmodel */; };
+		4E50133922F39DBD0058404C /* ParserAutomata+Initialization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E50133822F39DBD0058404C /* ParserAutomata+Initialization.swift */; };
 		4E55EF1B22EA736200B56AC7 /* Downloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E55EF1522EA736200B56AC7 /* Downloader.swift */; };
 		4E55EF1C22EA736200B56AC7 /* DataRequirementsChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E55EF1622EA736200B56AC7 /* DataRequirementsChecker.swift */; };
 		4E55EF1D22EA736200B56AC7 /* RequirementFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E55EF1722EA736200B56AC7 /* RequirementFile.swift */; };
@@ -139,6 +140,7 @@
 		4E50132622F1F9730058404C /* ParserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ParserModel.swift; path = ../../../../../../System/Volumes/Data/Users/dabeluchindubisi/Developer/LanguageParseModels/Sources/LanguageParseModels/ParserModel.swift; sourceTree = "<group>"; };
 		4E50132922F26E9A0058404C /* ConversionHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConversionHelpers.swift; path = "../../../../../../System/Volumes/Data/Users/dabeluchindubisi/Developer/NNSyntaxParser/NNSyntaxParser/Model Conversion/ConversionHelpers.swift"; sourceTree = "<group>"; };
 		4E50133422F277430058404C /* MLParserModel.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MLParserModel.mlmodel; sourceTree = "<group>"; };
+		4E50133822F39DBD0058404C /* ParserAutomata+Initialization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "ParserAutomata+Initialization.swift"; path = "../../../../../../System/Volumes/Data/Users/dabeluchindubisi/Developer/LanguageParseModels/Sources/LanguageParseModels/ParserAutomata+Initialization.swift"; sourceTree = "<group>"; };
 		4E55EF1522EA736200B56AC7 /* Downloader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Downloader.swift; sourceTree = "<group>"; };
 		4E55EF1622EA736200B56AC7 /* DataRequirementsChecker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataRequirementsChecker.swift; sourceTree = "<group>"; };
 		4E55EF1722EA736200B56AC7 /* RequirementFile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequirementFile.swift; sourceTree = "<group>"; };
@@ -436,6 +438,7 @@
 				4EFC14F822DE8B4700B2DA6E /* Parser.swift */,
 				4EE4716A22E3F94900B080A8 /* ParseExample.swift */,
 				4E50132622F1F9730058404C /* ParserModel.swift */,
+				4E50133822F39DBD0058404C /* ParserAutomata+Initialization.swift */,
 			);
 			name = LanguageParseModels;
 			path = ../LanguageParseModels/Sources/LanguageParseModels;
@@ -594,6 +597,7 @@
 				4E55EFAE22EA7DF900B56AC7 /* GLMClassifier.pb.swift in Sources */,
 				4E50133522F277430058404C /* MLParserModel.mlmodel in Sources */,
 				4E55EFAB22EA7DF900B56AC7 /* TreeEnsemble.pb.swift in Sources */,
+				4E50133922F39DBD0058404C /* ParserAutomata+Initialization.swift in Sources */,
 				4E55EFA822EA7DF900B56AC7 /* Normalizer.pb.swift in Sources */,
 				4EFC14F522DD45B300B2DA6E /* ParserAutomata.swift in Sources */,
 				4E55EFB022EA7DF900B56AC7 /* ArrayFeatureExtractor.pb.swift in Sources */,

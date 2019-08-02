@@ -25,9 +25,6 @@ class TFParseTrainer {
     let tagger: NLTagger = NLTagger(tagSchemes: [.lexicalClass])
     let explorationEpochThreshold: Int
     let explorationProbability: Float
-    private lazy var optimizer = {
-        return Adam(for: model, learningRate: 0.1)
-    }()
     
     init(serializer: ModelSerializer, explorationEpochThreshold: Int, explorationProbability: Float, featureProvider: TransitionFeatureProvider, model: TFParserModel) {
         self.serializer = serializer
@@ -37,74 +34,72 @@ class TFParseTrainer {
         self.model = model
     }
     
-    func fasterTrain(examples: [ParseExample], batchSize: Int, startEpoch: Int = 1, epochs: Int) {
+    func train(trainSet: [ParseExample], batchSize: Int = 32, startEpoch: Int = 1, epochs: Int) -> (trainAccuracies: [Float], trainLoss: [Float]) {
         guard startEpoch <= epochs else {
-            return
+            return ([], [])
         }
         
-        let stateGenerator: (String) -> ParserAutomata = { [tagger] sentence in
-            let rootPrefixRange = sentence.range(of: UDReader.rootPrefix)!
-            let range = sentence.range(of: sentence.suffix(from: rootPrefixRange.upperBound))!
-            tagger.string = sentence
-            
-            let rootToken = Token(i: 0, sentenceRange: rootPrefixRange, posTag: .root)
-            return ParserAutomata(
-                rootToken: rootToken,
-                buffer: tagger.tags(in: range,
-                                    unit: .word,
-                                    scheme: .lexicalClass,
-                                    options: [.omitWhitespace])
-                    .enumerated()
-                    .map({ Token(i: $0.offset + 1, sentenceRange: $0.element.1, posTag: POSTag(nlTag: $0.element.0!)! ) })
-            )
-        }
-        
+        let queue = DispatchQueue(label: "training_queue")
+        let group = DispatchGroup()
         let optimizer = Adam(for: model, learningRate: 0.01)
+        
+        var trainAccuracyResults: [Float] = []
+        var trainLossResults: [Float] = []
         for epoch in startEpoch...epochs {
             var epochLoss: Float = 0
             var epochAccuracy: Float = 0
-            var ignoredSentences: Int = 0
+            var ignoredSentencesCount: Int = 0
+            var batchCount: Int = 0
             let epochStartDate = Date()
             
-            let shuffled = examples.shuffled()
+            let shuffled = trainSet.shuffled()
             var shuffledIterator = shuffled.makeIterator()
-            
             var workingExamples = (0..<batchSize).map({ _ in shuffledIterator.next() })
-            var states: [ParserAutomata?] = workingExamples.map({ $0 != nil ? stateGenerator($0!.sentence) : nil })
-            var nonTerminalStatesIndices = (0..<states.count).compactMap({ (states[$0] != nil && states[$0]!.isTerminal) ? nil : $0 })
+            var states: [ParserAutomata?] = {
+                var states = [ParserAutomata?](repeating: nil, count: workingExamples.count)
+                for i in 0..<workingExamples.count {
+                    group.enter()
+                    queue.async { [tagger] in
+                        states[i] = (workingExamples[i] == nil) ? nil : ParserAutomata(tagger: tagger, rootPrefix: Parser.rootPrefix, sentence: workingExamples[i]!.sentence)
+                        group.leave()
+                    }
+                }
+                group.wait()
+                return states
+            }()
             
+            var nonTerminalStatesIndices = self.nonTerminalStateIndices(for: states)
             repeat {
-                let unsanitizedCorrects: [[Transition]] = {
-                    var corrects = [[Transition]](repeating: [], count: nonTerminalStatesIndices.count)
-                    let queue = DispatchQueue(label: "queue.corrects")
-                    let group = DispatchGroup()
-                    for i in 0..<nonTerminalStatesIndices.count {
+                var ignoredStateIndices = Set<Int>()
+                let stateWithCorrects: [(stateIdx: Int, corrects: [Transition])] = {
+                    var statesWithCorrects = [(stateIdx: Int, corrects: [Transition])]()
+                    for i in 0 ..< nonTerminalStatesIndices.count {
                         group.enter()
                         queue.async {
-                            corrects[i] = states[nonTerminalStatesIndices[i]]!.correctTransition(goldArcs: workingExamples[nonTerminalStatesIndices[i]]!.goldArcs)
+                            let correct = states[nonTerminalStatesIndices[i]]!.correctTransition(goldArcs: workingExamples[nonTerminalStatesIndices[i]]!.goldArcs)
+                            if correct.isEmpty {
+                                ignoredStateIndices.insert(nonTerminalStatesIndices[i])
+                            } else {
+                                statesWithCorrects.append((nonTerminalStatesIndices[i], correct))
+                            }
                             group.leave()
                         }
                     }
-                    _ = group.wait(timeout: .distantFuture)
-                    return corrects
+                    group.wait()
+                    return statesWithCorrects
                 }()
                 
-                let shouldIgnore = Set<Int>((0..<unsanitizedCorrects.count).filter({ unsanitizedCorrects[$0].isEmpty }))
-                if !shouldIgnore.isEmpty {
+                if !ignoredStateIndices.isEmpty {
                     // If there are no correct transitions, it means that the gold tree is not reachable
                     // via our transition system. In such scenarios, it doesn't make sense to continue
                     // training on the current example as it could confuse the model more.
-                    ignoredSentences += shouldIgnore.count
-                    print("Ignoring \(shouldIgnore.count) sentence as gold tree cannot be attained")
-                    print("*** \(ignoredSentences) SENTENCES IGNORED SO FAR")
+                    ignoredSentencesCount += ignoredStateIndices.count
+                    print("Ignoring \(ignoredStateIndices.count) sentence as gold tree cannot be attained")
+                    print("*** \(ignoredSentencesCount) SENTENCES IGNORED SO FAR")
                 }
-                
-                let stateWithCorrects = (0..<nonTerminalStatesIndices.count).compactMap({ shouldIgnore.contains($0) ? nil : (stateIdx: nonTerminalStatesIndices[$0], corrects: unsanitizedCorrects[$0]) })
                 
                 var transitionBatch: TransitionBatch = {
                     var feats = [[Int32]](repeating: [], count: stateWithCorrects.count)
-                    let queue = DispatchQueue(label: "queue.feats")
-                    let group = DispatchGroup()
                     for i in 0..<stateWithCorrects.count {
                         group.enter()
                         queue.async {
@@ -112,19 +107,17 @@ class TFParseTrainer {
                             group.leave()
                         }
                     }
-                    _ = group.wait(timeout: .distantFuture)
+                    group.wait()
                     
                     let embeddingInput = EmbeddingInput(indices: Tensor<Int32>(ShapedArray<Int32>(shape: [stateWithCorrects.count, feats[0].count], scalars: feats.flatMap({ $0 }))))
                     return TransitionBatch(
                         features: embeddingInput,
-                        transitionLabels: Tensor<Int32>([0])
+                        transitionLabels: Tensor<Int32>([0]) // will be set later
                     )
                 }()
                 
                 let valids: [[Transition]] = {
                     var valids = [[Transition]](repeating: [], count: stateWithCorrects.count)
-                    let queue = DispatchQueue(label: "queue.valids")
-                    let group = DispatchGroup()
                     for i in 0..<stateWithCorrects.count {
                         group.enter()
                         queue.async {
@@ -132,27 +125,27 @@ class TFParseTrainer {
                             group.leave()
                         }
                     }
-                    _ = group.wait(timeout: .distantFuture)
+                    group.wait()
                     return valids
                 }()
                 
                 let guesses = model(transitionBatch.features) // predictions
                 
-                let bestGuesses = (0..<valids.count).map({ batchIdx in
-                    valids[batchIdx].max(by: { guesses[batchIdx][$0.rawValue] < guesses[batchIdx][$1.rawValue] })!
+                let bestGuesses = (0..<valids.count).map({ indexInBatch in
+                    valids[indexInBatch].max(by: { guesses[indexInBatch][$0.rawValue] < guesses[indexInBatch][$1.rawValue] })!
                 })
-                transitionBatch.transitionLabels = Tensor<Int32>((0..<stateWithCorrects.count).map({ batchIdx in
-                    Int32(stateWithCorrects[batchIdx].corrects.max(by: { guesses[batchIdx][$0.rawValue] < guesses[batchIdx][$1.rawValue] })!.rawValue)
+                transitionBatch.transitionLabels = Tensor<Int32>((0..<stateWithCorrects.count).map({ indexInBatch in
+                    return Int32(stateWithCorrects[indexInBatch].corrects.max(by: { guesses[indexInBatch][$0.rawValue] < guesses[indexInBatch][$1.rawValue] })!.rawValue)
                 }))
                 
                 let loss = updateModel(optimizer: optimizer, batch: transitionBatch)
                 let logits = model(transitionBatch.features)
                 epochAccuracy += accuracy(predictions: logits.argmax(squeezingAxis: 1), truths: transitionBatch.transitionLabels)
                 epochLoss += loss.scalarized()
+                batchCount += 1
                 
+                // apply transition to state
                 let applyStates = {
-                    let queue = DispatchQueue(label: "queue.apply_states")
-                    let group = DispatchGroup()
                     for i in 0 ..< stateWithCorrects.count {
                         group.enter()
                         queue.async {
@@ -161,106 +154,56 @@ class TFParseTrainer {
                             group.leave()
                         }
                     }
-                    _ = group.wait(timeout: .distantFuture)
+                    group.wait()
                 }
                 applyStates()
                 
-                // update
-                let ignoredStatesIndices = shouldIgnore.map({ nonTerminalStatesIndices[$0] })
-                (0..<workingExamples.count).forEach { idx in
-                    let shouldUseNewExample = ignoredStatesIndices.contains(idx) || (states[idx]?.isTerminal ?? true)
-                    if shouldUseNewExample {
-                        let newExample = shuffledIterator.next()
-                        workingExamples[idx] = newExample
-                        states[idx] = newExample != nil ? stateGenerator(newExample!.sentence) : nil
+                // update working to remove ignoredIndices and new terminal states batch
+                let updateWorkingBatch = { [tagger] in
+                    for idx in 0..<workingExamples.count {
+                        group.enter()
+                        queue.async {
+                            let shouldUseNewExample = ignoredStateIndices.contains(idx) || (states[idx]?.isTerminal ?? true)
+                            if shouldUseNewExample {
+                                let newExample = shuffledIterator.next()
+                                workingExamples[idx] = newExample
+                                states[idx] = newExample != nil ? ParserAutomata(tagger: tagger, rootPrefix: Parser.rootPrefix, sentence: newExample!.sentence) : nil
+                            }
+                            group.leave()
+                        }
                     }
+                    group.wait()
                 }
-                nonTerminalStatesIndices = (0..<states.count).compactMap({
-                    (states[$0] == nil || (states[$0]?.isTerminal ?? true) || ignoredStatesIndices.contains($0)) ? nil : $0
-                })
+                updateWorkingBatch()
+                
+                // Set new nonTerminalStateIndices
+                nonTerminalStatesIndices = self.nonTerminalStateIndices(for: states)
             } while (nonTerminalStatesIndices.count > 0)
             
-            print("Epoch \(epoch): Loss: \(epochLoss), Duration: \(Date().timeIntervalSince(epochStartDate)/3600) hours")
+            // track some metrics
+            epochAccuracy /= Float(batchCount)
+            epochLoss /= Float(batchCount)
+            trainAccuracyResults.append(epochAccuracy)
+            trainLossResults.append(epochLoss)
+            print("Epoch \(epoch): Loss: \(epochLoss), Accuracy: \(epochAccuracy), Duration: \(Date().timeIntervalSince(epochStartDate)/3600) hours")
+            
+            // save the model at this checkpoint
             print("Saving model checkpoint after \(epoch) epoch")
             try! serializer.save(model: model, to: TFParseTrainer.savedModelName(epoch: epoch))
             print("trained model saved")
         }
+        
+        return (trainAccuracyResults, trainLossResults)
     }
     
-    func train(examples: [ParseExample], epochs: Int) {
-        let optimizer = Adam(for: model, learningRate: 0.01)
-        
-        for epoch in 1...epochs {
-            var epochLoss: Float = 0
-            var epochAccuracy: Float = 0
-            var tokenCount: Int = 0
-            var ignoredSentences: Int = 0
-            let epochStartDate = Date()
-            
-            let shuffled = examples.shuffled()
-            for i in 0..<shuffled.count {
-                let (sentence, goldArcs) = shuffled[i]
-                let rootPrefixRange = sentence.range(of: UDReader.rootPrefix)!
-                let range = sentence.range(of: sentence.suffix(from: rootPrefixRange.upperBound))!
-                tagger.string = sentence
-                
-                let rootToken = Token(i: 0, sentenceRange: rootPrefixRange, posTag: .root)
-                var state = ParserAutomata(
-                    rootToken: rootToken,
-                    buffer: tagger.tags(in: range,
-                                        unit: .word,
-                                        scheme: .lexicalClass,
-                                        options: [.omitWhitespace])
-                        .enumerated()
-                        .map({ Token(i: $0.offset + 1, sentenceRange: $0.element.1, posTag: POSTag(nlTag: $0.element.0!)! ) })
-                )
-                
-                while !state.isTerminal  {
-                    let corrects = state.correctTransition(goldArcs: goldArcs)
-                    guard corrects.count > 0 else {
-                        // If there are no correct transitions, it means that the gold tree is not reachable
-                        // via our transition system. In such scenarios, it doesn't make sense to continue
-                        // training on the current example as it could confuse the model more.
-                        ignoredSentences += 1
-                        print("Ignoring sentence as gold tree cannot be attained: \(sentence)")
-                        print("*** \(ignoredSentences) SENTENCES IGNORED SO FAR")
-                        break
-                    }
-                    
-                    let feats = featureProvider.features(for: state, sentence: sentence)
-                    let features = EmbeddingInput(indices: Tensor<Int32>(ShapedArray<Int32>(shape: [1, feats.count], scalars: feats)))
-                    let valids = state.validTransitions()
-                    let guesses = model(features) // predictions
-                    
-                    let bestGuess = valids.max(by: { guesses[0][$0.rawValue] < guesses[0][$1.rawValue] })!
-                    let correctTransition = corrects.max(by: { guesses[0][$0.rawValue] < guesses[0][$1.rawValue] })!
-                    let loss = updateModel(optimizer: optimizer, features: features, correct: correctTransition)
-                    
-                    let logits = model(features)
-                    epochAccuracy += accuracy(predictions: logits.argmax(squeezingAxis: 1), truths: Tensor<Int32>([Int32(correctTransition.rawValue)]))
-                    epochLoss += loss.scalarized()
-                    tokenCount += 1
-                    
-                    state.apply(transition: explore(currentEpoch: epoch, guess: bestGuess, correct: correctTransition))
-                }
-            }
-            
-            epochAccuracy /= Float(tokenCount)
-            epochLoss /= Float(tokenCount)
-            print("Epoch \(epoch): Loss: \(epochLoss), Accuracy: \(epochAccuracy), Duration: \(Date().timeIntervalSince(epochStartDate)/3600) hours")
-            
-            print("Saving model checkpoint after \(epoch) epoch")
-            try! serializer.save(model: model, to: "\(Constants.trainModelCheckpointName)_\(epoch)epoch")
-            print("trained model saved")
-        }
+    private func nonTerminalStateIndices(for states: [ParserAutomata?]) -> [Int] {
+        return (0..<states.count).compactMap({
+            (states[$0]?.isTerminal ?? true) ? nil : $0
+        })
     }
     
     private func accuracy(predictions: Tensor<Int32>, truths: Tensor<Int32>) -> Float {
         return Tensor<Float>(predictions .== truths).mean().scalarized()
-    }
-    
-    @discardableResult private func updateModel(optimizer: Adam<TFParserModel>, features: EmbeddingInput, correct: Transition) -> Tensor<Float> {
-        return updateModel(optimizer: optimizer, batch: TransitionBatch(features: features, transitionLabels: Tensor<Int32>(Int32(correct.rawValue))))
     }
     
     @discardableResult private func updateModel(optimizer: Adam<TFParserModel>, batch: TransitionBatch) -> Tensor<Float> {

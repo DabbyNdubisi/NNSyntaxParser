@@ -10,6 +10,7 @@ import Foundation
 import TensorFlow
 import CoreML
 import NaturalLanguage
+import Python
 
 // Check if data requirements are present
 print("Checking data requirements...")
@@ -61,8 +62,23 @@ print("beginning training...")
 print("loading train examples...")
 let trainExamples = UDReader.readTrainData()
 print("training model with \(trainExamples.count) examples...")
-trainer.fasterTrain(examples: trainExamples, batchSize: 100, startEpoch: (savedEpoch ?? 0) + 1, epochs: 3)
+let history = trainer.train(trainSet: trainExamples, batchSize: 32, startEpoch: (savedEpoch ?? 0) + 1, epochs: 50)
 print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
+
+// MARK: - Plot training performance
+let plt = Python.import("matplotlib.pyplot")
+plt.figure(figsize: [12, 8])
+
+let accuracyAxes = plt.subplot(2, 1, 1)
+accuracyAxes.set_ylabel("Accuracy")
+accuracyAxes.plot(history.trainAccuracies)
+
+let lossAxes = plt.subplot(2, 1, 2)
+lossAxes.set_ylabel("Loss")
+lossAxes.set_xlabel("Epoch")
+lossAxes.plot(history.trainLoss)
+
+plt.show()
 
 // MARK: - Model testing
 extension TFParserModel: ParserModel {
@@ -98,7 +114,7 @@ let accuracy = test(
 )
 print("testing done. Accuracy: \(accuracy * 100.0)%")
 
-let shouldSaveFinalModel = false
+let shouldSaveFinalModel = true
 if shouldSaveFinalModel {
     print("Saving final trained model")
     try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
@@ -107,7 +123,7 @@ if shouldSaveFinalModel {
 }
 
 // MARK: - model conversion
-let shouldConvert = false
+let shouldConvert = true
 if shouldConvert {
     let converter = MLParserModelConverter(model: savedModel!)
     let converted = try! converter.convertToMLModel()
@@ -116,20 +132,20 @@ if shouldConvert {
 }
 
 // MARK: - test converted model
-extension MLParserModel: ParserModel {
-    func transitionProbabilities(for features: [Int32]) throws -> [Int : Float] {
-        let arrayInput = try MLMultiArray(features)
-        let prediction = try self.prediction(input: MLParserModelInput(parseState: arrayInput))
-        return (0..<numLabels).reduce([Int:Float]()) {
-            var result = $0
-            result[$1] = prediction.outputTransitionLogits[[NSNumber(value: $1)]].floatValue
-            return result
-        }
-    }
-}
-
-let convertedAccuracy = test(
-    parser: Parser(model: MLParserModel(), featureProvider: featureProvider),
-    examples: testExamples
-)
-print("testing converted done. Accuracy: \(convertedAccuracy * 100.0)%")
+//extension MLParserModel: ParserModel {
+//    func transitionProbabilities(for features: [Int32]) throws -> [Int : Float] {
+//        let arrayInput = try MLMultiArray(features)
+//        let prediction = try self.prediction(input: MLParserModelInput(parseState: arrayInput))
+//        return (0..<numLabels).reduce([Int:Float]()) {
+//            var result = $0
+//            result[$1] = prediction.outputTransitionLogits[[NSNumber(value: $1)]].floatValue
+//            return result
+//        }
+//    }
+//}
+//
+//let convertedAccuracy = test(
+//    parser: Parser(model: MLParserModel(), featureProvider: featureProvider),
+//    examples: testExamples
+//)
+//print("testing converted done. Accuracy: \(convertedAccuracy * 100.0)%")

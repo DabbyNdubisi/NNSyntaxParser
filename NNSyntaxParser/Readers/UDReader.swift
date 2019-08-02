@@ -11,8 +11,8 @@ import Python
 import NaturalLanguage
 
 struct UDReader {
-    static var rootPrefix: String {
-        return "<ROOT>"
+    private static var rootPrefix: String {
+        return Parser.rootPrefix
     }
     
     static func readTrainData() -> [ParseExample] {
