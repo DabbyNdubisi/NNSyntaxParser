@@ -38,11 +38,13 @@ let vocabularyEmbeddings = EmbeddingsReader.dependencyEmbedding(from: GloveExtra
 print("token embeddings populated")
 
 let featureProvider = vocabularyEmbeddings.featureProvider
-let serializer = ModelSerializer()
+let serializer = ModelSerializer(location: FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("trained-models"))
+
+let epochs = 50
 
 var savedModel: TFParserModel?
 var savedEpoch: Int?
-for i in (1...3).reversed() {
+for i in (1...epochs).reversed() {
     let modelName = TFParseTrainer.savedModelName(epoch: i)
     if serializer.modelExists(name: modelName) {
         savedModel = try! serializer.loadModel(name: modelName)
@@ -52,8 +54,9 @@ for i in (1...3).reversed() {
 }
 
 // MARK: Model training
+
 let trainer = TFParseTrainer(serializer: serializer,
-                           explorationEpochThreshold: 1,
+                           explorationEpochThreshold: 2,
                            explorationProbability: 0.9,
                            featureProvider: featureProvider,
                            model: savedModel ?? TFParserModel(embeddings: vocabularyEmbeddings.embedding))
@@ -61,8 +64,10 @@ let startDate = Date()
 print("beginning training...")
 print("loading train examples...")
 let trainExamples = UDReader.readTrainData()
+print("loading validtion examples...")
+let validationExamples = UDReader.readValidationData()
 print("training model with \(trainExamples.count) examples...")
-let history = trainer.train(trainSet: trainExamples, batchSize: 32, startEpoch: (savedEpoch ?? 0) + 1, epochs: 50)
+let (train, validation) = trainer.train(trainSet: trainExamples, validationSet: validationExamples, batchSize: 32, startEpoch: (savedEpoch ?? 0) + 1, epochs: epochs)
 print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
 
 // MARK: - Plot training performance
@@ -71,12 +76,16 @@ plt.figure(figsize: [12, 8])
 
 let accuracyAxes = plt.subplot(2, 1, 1)
 accuracyAxes.set_ylabel("Accuracy")
-accuracyAxes.plot(history.trainAccuracies)
+accuracyAxes.plot(train.accuracyResults)
+accuracyAxes.plot(validation.accuracyResults)
+accuracyAxes.legend(["train", "validation"], loc:"upper right")
 
 let lossAxes = plt.subplot(2, 1, 2)
 lossAxes.set_ylabel("Loss")
 lossAxes.set_xlabel("Epoch")
-lossAxes.plot(history.trainLoss)
+lossAxes.plot(train.lossResults)
+lossAxes.plot(validation.lossResults)
+lossAxes.legend(["train", "validation"], loc:"upper right")
 
 plt.show()
 
@@ -109,27 +118,27 @@ print("loading test examples...")
 let testExamples = UDReader.readTestData().shuffled()
 print("testing model with \(testExamples.count) examples...")
 let accuracy = test(
-    parser: Parser(model: savedModel!, featureProvider: featureProvider),
+    parser: Parser(model: trainer.model, featureProvider: featureProvider),
     examples: testExamples
 )
 print("testing done. Accuracy: \(accuracy * 100.0)%")
 
-let shouldSaveFinalModel = true
-if shouldSaveFinalModel {
-    print("Saving final trained model")
-    try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
-    print("Model saved...")
-    print("Done.")
-}
-
-// MARK: - model conversion
-let shouldConvert = true
-if shouldConvert {
-    let converter = MLParserModelConverter(model: savedModel!)
-    let converted = try! converter.convertToMLModel()
-    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
-    try! converted.write(to: downloadsURL, options: .atomic)
-}
+//let shouldSaveFinalModel = true
+//if shouldSaveFinalModel {
+//    print("Saving final trained model")
+//    try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
+//    print("Model saved...")
+//    print("Done.")
+//}
+//
+//// MARK: - model conversion
+//let shouldConvert = true
+//if shouldConvert {
+//    let converter = MLParserModelConverter(model: savedModel!)
+//    let converted = try! converter.convertToMLModel()
+//    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
+//    try! converted.write(to: downloadsURL, options: .atomic)
+//}
 
 // MARK: - test converted model
 //extension MLParserModel: ParserModel {

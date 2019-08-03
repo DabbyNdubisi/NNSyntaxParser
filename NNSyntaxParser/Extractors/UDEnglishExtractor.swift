@@ -26,6 +26,13 @@ struct UDEnglishExtractor {
             .appendingPathExtension("conllu")
     }
     
+    static var validationDataURL: URL {
+        return Constants.defaultLocation
+            .appendingPathComponent("UD_English")
+            .appendingPathComponent("en_ewt-ud-dev")
+            .appendingPathExtension("conllu")
+    }
+    
     /// The supported file type for the extractor
     var supportedExtension: FileExtension {
         .tgz

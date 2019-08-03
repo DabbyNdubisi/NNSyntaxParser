@@ -20,6 +20,11 @@ struct UDReader {
         return generateExamples(from: readTokens)
     }
     
+    static func readValidationData() -> [ParseExample] {
+        let readTokens = readSentenceTokens(from: UDEnglishExtractor.validationDataURL)
+        return generateExamples(from: readTokens)
+    }
+    
     static func readTestData() -> [ParseExample] {
         let readTokens = readSentenceTokens(from: UDEnglishExtractor.testDataURL)
         return generateExamples(from: readTokens)
