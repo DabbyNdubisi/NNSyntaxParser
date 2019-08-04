@@ -13,6 +13,7 @@ import NaturalLanguage
 class TFParseTrainer {
     enum Constants {
         static let trainModelCheckpointName = "trainedModel"
+        static let bestTrainedModelName = "trainedModel-best"
     }
     
     struct History {
@@ -29,16 +30,26 @@ class TFParseTrainer {
     let featureProvider: TransitionFeatureProvider
     let explorationEpochThreshold: Int
     let explorationProbability: Float
+    let regularizerParameter: Float
     
-    init(serializer: ModelSerializer, explorationEpochThreshold: Int, explorationProbability: Float, featureProvider: TransitionFeatureProvider, model: TFParserModel) {
+    private let saveQueue = DispatchQueue(label: "save.queue")
+    
+    init(serializer: ModelSerializer, explorationEpochThreshold: Int, explorationProbability: Float, regularizerParameter: Float, featureProvider: TransitionFeatureProvider, model: TFParserModel) {
         self.serializer = serializer
         self.explorationEpochThreshold = explorationEpochThreshold
         self.explorationProbability = explorationProbability
+        self.regularizerParameter = regularizerParameter
         self.featureProvider = featureProvider
         self.model = model
     }
     
-    func train(trainSet: [ParseExample], validationSet: [ParseExample]? = nil, batchSize: Int = 32, startEpoch: Int = 1, epochs: Int) -> (trainHistory: History, validationHistory: History) {
+    func train(trainSet: [ParseExample], validationSet: [ParseExample]? = nil, batchSize: Int = 32, startEpoch: Int = 1, epochs: Int, retrieveCheckpoint: Bool, saveCheckpoints: Bool) -> (trainHistory: History, validationHistory: History) {
+        // retreive checkpoints
+        if retrieveCheckpoint, let modelToRetrieve = retrieveLastSavedModel(totalEpochs: epochs) {
+            model = modelToRetrieve.model
+            return train(trainSet: trainSet, validationSet: validationSet, batchSize: batchSize, startEpoch: modelToRetrieve.epoch + 1, epochs: epochs, retrieveCheckpoint: false, saveCheckpoints: saveCheckpoints)
+        }
+        
         var trainHistory = History()
         var validationHistory = History()
         guard startEpoch <= epochs else {
@@ -46,7 +57,7 @@ class TFParseTrainer {
         }
 
         let optimizer = Adam(for: model, learningRate: 0.01)
-
+        var bestLas: Float = 0.0
         for epoch in startEpoch...epochs {
             let epochStartDate = Date()
             
@@ -67,14 +78,35 @@ class TFParseTrainer {
                 validationHistory.accuracyResults.append(validationAccuracy)
                 validationHistory.lossResults.append(validationLoss)
                 print("Epoch \(epoch): Validation Loss: \(validationLoss), Validation Accuracy: \(validationAccuracy)")
+                
+                let parser = Parser(model: model, featureProvider: featureProvider)
+                let devLas = test(parser: parser, examples: validationSet)
+                print("Epoch \(epoch) Validation LAS: \(devLas)")
+                
+                if devLas > bestLas {
+                    bestLas = devLas
+                    
+                    // save the new best model at this checkpoint
+                    guard saveCheckpoints else {
+                        continue
+                    }
+                    print("Saving model with best LAS (\(epoch) epoch)")
+                    save(model: model, name: TFParseTrainer.Constants.bestTrainedModelName) {
+                        print("best model saved")
+                    }
+                }
             }
             
-            // save the model at this checkpoint
+            // save checkpoint for model
+            guard saveCheckpoints else {
+                continue
+            }
             print("Saving model checkpoint after \(epoch) epoch")
-            try! serializer.save(model: model, to: TFParseTrainer.savedModelName(epoch: epoch))
-            print("trained model saved")
+            save(model: model, name: TFParseTrainer.savedModelName(epoch: epoch)) {
+                print("trained model saved")
+            }
         }
-        
+                
         return (trainHistory, validationHistory)
     }
     
@@ -169,6 +201,31 @@ class TFParseTrainer {
         return (epochAccuracy, epochLoss, batchCount)
     }
     
+    private func save(model: TFParserModel, name: String, completion: @escaping () -> Void) {
+        saveQueue.async {
+            try! self.serializer.save(model: model, to: name)
+            completion()
+        }
+    }
+    
+    private func retrieveLastSavedModel(totalEpochs: Int) -> (model: TFParserModel, epoch: Int)? {
+        var savedModel: TFParserModel?
+        var savedEpoch: Int?
+        for i in (1...totalEpochs).reversed() {
+            let modelName = TFParseTrainer.savedModelName(epoch: i)
+            if serializer.modelExists(name: modelName) {
+                savedModel = try! serializer.loadModel(name: modelName)
+                savedEpoch = i
+                break
+            }
+        }
+        
+        if let savedModel = savedModel, let savedEpoch = savedEpoch {
+            return (savedModel, savedEpoch)
+        } else {
+            return nil
+        }
+    }
     
     private func nonTerminalStateIndices(for states: [ParserAutomata?]) -> [Int] {
         return (0..<states.count).compactMap({
@@ -183,7 +240,9 @@ class TFParseTrainer {
     private func lossWithGradient(batch: TransitionBatch) -> (loss: Tensor<Float>, gradient: TFParserModel.TangentVector) {
         let (loss, grad) = model.valueWithGradient { (model: TFParserModel) -> Tensor<Float> in
             let logits = model(batch.features)
-            return softmaxCrossEntropy(logits: logits, labels: batch.transitionLabels)
+            let l2Loss = withoutDerivative(at: model.l2Loss)
+            let crossEntropyLoss = softmaxCrossEntropy(logits: logits, labels: batch.transitionLabels)
+            return crossEntropyLoss + (l2Loss * self.regularizerParameter)
         }
         
         return (loss, grad)

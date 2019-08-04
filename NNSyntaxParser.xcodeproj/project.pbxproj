@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		4E11139722D6E5DC0011B052 /* GloveExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E11139622D6E5DC0011B052 /* GloveExtractor.swift */; };
+		4E14227922F71AB90005BB5A /* TFParserModelHiddenLayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E14227822F71AB90005BB5A /* TFParserModelHiddenLayer.swift */; };
+		4E14228322F748240005BB5A /* ModelTesting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E14228222F748240005BB5A /* ModelTesting.swift */; };
 		4E50132722F1F9730058404C /* ParserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E50132622F1F9730058404C /* ParserModel.swift */; };
 		4E50132A22F26E9A0058404C /* ConversionHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E50132922F26E9A0058404C /* ConversionHelpers.swift */; };
 		4E50133522F277430058404C /* MLParserModel.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4E50133422F277430058404C /* MLParserModel.mlmodel */; };
@@ -137,6 +139,8 @@
 
 /* Begin PBXFileReference section */
 		4E11139622D6E5DC0011B052 /* GloveExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GloveExtractor.swift; sourceTree = "<group>"; };
+		4E14227822F71AB90005BB5A /* TFParserModelHiddenLayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TFParserModelHiddenLayer.swift; sourceTree = "<group>"; };
+		4E14228222F748240005BB5A /* ModelTesting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTesting.swift; sourceTree = "<group>"; };
 		4E50132622F1F9730058404C /* ParserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ParserModel.swift; path = ../../../../../../System/Volumes/Data/Users/dabeluchindubisi/Developer/LanguageParseModels/Sources/LanguageParseModels/ParserModel.swift; sourceTree = "<group>"; };
 		4E50132922F26E9A0058404C /* ConversionHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ConversionHelpers.swift; path = "../../../../../../System/Volumes/Data/Users/dabeluchindubisi/Developer/NNSyntaxParser/NNSyntaxParser/Model Conversion/ConversionHelpers.swift"; sourceTree = "<group>"; };
 		4E50133422F277430058404C /* MLParserModel.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = MLParserModel.mlmodel; sourceTree = "<group>"; };
@@ -379,6 +383,7 @@
 				4EFC14F022DBF54700B2DA6E /* ParseExample.swift */,
 				4EB3E6F322D83E0D00E03D77 /* DependencyEmbedding.swift */,
 				4EB3E6EF22D8202300E03D77 /* TFParserModel.swift */,
+				4E14227822F71AB90005BB5A /* TFParserModelHiddenLayer.swift */,
 				4EFC14EE22DBF51300B2DA6E /* TFParseTrainer.swift */,
 				4ECC780A22D56DF300737904 /* main.swift */,
 			);
@@ -420,6 +425,7 @@
 				4E55EF1922EA736200B56AC7 /* FileExtension.swift */,
 				4E55EF1A22EA736200B56AC7 /* ModelSaver.swift */,
 				4E55EF1722EA736200B56AC7 /* RequirementFile.swift */,
+				4E14228222F748240005BB5A /* ModelTesting.swift */,
 			);
 			path = Utils;
 			sourceTree = "<group>";
@@ -601,6 +607,7 @@
 				4E55EFA822EA7DF900B56AC7 /* Normalizer.pb.swift in Sources */,
 				4EFC14F522DD45B300B2DA6E /* ParserAutomata.swift in Sources */,
 				4E55EFB022EA7DF900B56AC7 /* ArrayFeatureExtractor.pb.swift in Sources */,
+				4E14228322F748240005BB5A /* ModelTesting.swift in Sources */,
 				4E55EFAD22EA7DF900B56AC7 /* BayesianProbitRegressor.pb.swift in Sources */,
 				4EB3E6F022D8202300E03D77 /* TFParserModel.swift in Sources */,
 				4EFC14E822D96BDC00B2DA6E /* POSTag.swift in Sources */,
@@ -612,6 +619,7 @@
 				4EFC14EA22D96BDC00B2DA6E /* Dependency.swift in Sources */,
 				4E55EF1C22EA736200B56AC7 /* DataRequirementsChecker.swift in Sources */,
 				4E55EFAA22EA7DF900B56AC7 /* DictVectorizer.pb.swift in Sources */,
+				4E14227922F71AB90005BB5A /* TFParserModelHiddenLayer.swift in Sources */,
 				4E55EFB522EA7DF900B56AC7 /* WordEmbedding.pb.swift in Sources */,
 				4E55EFB422EA7DF900B56AC7 /* Scaler.pb.swift in Sources */,
 				4E55EFB922EA7DF900B56AC7 /* DataStructures.pb.swift in Sources */,

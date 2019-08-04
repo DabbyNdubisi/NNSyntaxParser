@@ -40,26 +40,15 @@ print("token embeddings populated")
 let featureProvider = vocabularyEmbeddings.featureProvider
 let serializer = ModelSerializer(location: FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("trained-models"))
 
-let epochs = 50
-
-var savedModel: TFParserModel?
-var savedEpoch: Int?
-for i in (1...epochs).reversed() {
-    let modelName = TFParseTrainer.savedModelName(epoch: i)
-    if serializer.modelExists(name: modelName) {
-        savedModel = try! serializer.loadModel(name: modelName)
-        savedEpoch = i
-        break
-    }
-}
+let epochs = 25
 
 // MARK: Model training
-
 let trainer = TFParseTrainer(serializer: serializer,
                            explorationEpochThreshold: 2,
                            explorationProbability: 0.9,
+                           regularizerParameter: 0.00000001,
                            featureProvider: featureProvider,
-                           model: savedModel ?? TFParserModel(embeddings: vocabularyEmbeddings.embedding))
+                           model: TFParserModel(embeddings: vocabularyEmbeddings.embedding))
 let startDate = Date()
 print("beginning training...")
 print("loading train examples...")
@@ -67,7 +56,7 @@ let trainExamples = UDReader.readTrainData()
 print("loading validtion examples...")
 let validationExamples = UDReader.readValidationData()
 print("training model with \(trainExamples.count) examples...")
-let (train, validation) = trainer.train(trainSet: trainExamples, validationSet: validationExamples, batchSize: 32, startEpoch: (savedEpoch ?? 0) + 1, epochs: epochs)
+let (train, validation) = trainer.train(trainSet: trainExamples, validationSet: validationExamples, batchSize: 32, epochs: epochs, retrieveCheckpoint: true, saveCheckpoints: true)
 print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
 
 // MARK: - Plot training performance
@@ -90,47 +79,18 @@ lossAxes.legend(["train", "validation"], loc:"upper right")
 plt.show()
 
 // MARK: - Model testing
-extension TFParserModel: ParserModel {
-    func transitionProbabilities(for features: [Int32]) throws -> [Int : Float] {
-        let embeddingsInput = EmbeddingInput(indices: Tensor<Int32>(ShapedArray<Int32>(shape: [1, features.count], scalars: features)))
-        let prediction = self(embeddingsInput)
-        return prediction[0].scalars.enumerated().reduce([Int: Float]()) {
-            var result = $0
-            result[$1.offset] = $1.element
-            return result
-        }
-    }
-}
-
-func test(parser: Parser, examples: [ParseExample]) -> Float {
-    var results = [Float]()
-    for example in examples {
-        let answer = try! parser.parse(sentence: example.sentence)
-        let accuracy = Float(answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head && $0.element?.relationship == example.goldArcs[$0.offset]?.relationship }).count) / Float(answer.heads.count)
-        results.append(accuracy)
-    }
-
-    return results.reduce(0, +) / Float(results.count)
-}
-
+print("retrieving best model")
+let bestModel = try! serializer.loadModel(name: TFParseTrainer.Constants.bestTrainedModelName)
 print("testing model...")
 print("loading test examples...")
 let testExamples = UDReader.readTestData().shuffled()
 print("testing model with \(testExamples.count) examples...")
 let accuracy = test(
-    parser: Parser(model: trainer.model, featureProvider: featureProvider),
+    parser: Parser(model: bestModel, featureProvider: featureProvider),
     examples: testExamples
 )
 print("testing done. Accuracy: \(accuracy * 100.0)%")
 
-//let shouldSaveFinalModel = true
-//if shouldSaveFinalModel {
-//    print("Saving final trained model")
-//    try! serializer.save(model: trainer.model, to: "FINAL_trained_model")
-//    print("Model saved...")
-//    print("Done.")
-//}
-//
 //// MARK: - model conversion
 //let shouldConvert = true
 //if shouldConvert {
