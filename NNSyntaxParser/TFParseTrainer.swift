@@ -72,7 +72,7 @@ class TFParseTrainer {
             
             // validate on validation set
             if let validationSet = validationSet {
-                var (validationAccuracy, validationLoss, validationBatchCount) = evaluate(on: validationSet, batchSize: validationSet.count, explorer: { _, correct in correct })
+                var (validationAccuracy, validationLoss, validationBatchCount) = evaluate(on: validationSet, batchSize: validationSet.count, explorer: { guess, _ in guess })
                 validationAccuracy /= Float(validationBatchCount)
                 validationLoss /= Float(validationBatchCount)
                 validationHistory.accuracyResults.append(validationAccuracy)
@@ -87,9 +87,7 @@ class TFParseTrainer {
                     bestLas = devLas
                     
                     // save the new best model at this checkpoint
-                    guard saveCheckpoints else {
-                        continue
-                    }
+                    guard saveCheckpoints else { continue }
                     print("Saving model with best LAS (\(epoch) epoch)")
                     save(model: model, name: TFParseTrainer.Constants.bestTrainedModelName) {
                         print("best model saved")
@@ -98,9 +96,7 @@ class TFParseTrainer {
             }
             
             // save checkpoint for model
-            guard saveCheckpoints else {
-                continue
-            }
+            guard saveCheckpoints else { continue }
             print("Saving model checkpoint after \(epoch) epoch")
             save(model: model, name: TFParseTrainer.savedModelName(epoch: epoch)) {
                 print("trained model saved")
@@ -129,12 +125,12 @@ class TFParseTrainer {
             var ignoredStateIndices = Set<Int>()
             let stateWithCorrects: [(stateIdx: Int, corrects: [Transition])] = {
                 var statesWithCorrects = [(stateIdx: Int, corrects: [Transition])]()
-                for i in 0 ..< nonTerminalStatesIndices.count {
-                    let corrects = states[nonTerminalStatesIndices[i]]!.correctTransition(goldArcs: workingExamples[nonTerminalStatesIndices[i]]!.goldArcs)
+                for stateIdx in nonTerminalStatesIndices {
+                    let corrects = states[stateIdx]!.correctTransition(goldArcs: workingExamples[stateIdx]!.goldArcs)
                     if corrects.isEmpty {
-                        ignoredStateIndices.insert(nonTerminalStatesIndices[i])
+                        ignoredStateIndices.insert(stateIdx)
                     } else {
-                        statesWithCorrects.append((nonTerminalStatesIndices[i], corrects))
+                        statesWithCorrects.append((stateIdx, corrects))
                     }
                 }
                 return statesWithCorrects
@@ -150,7 +146,7 @@ class TFParseTrainer {
             }
             
             var transitionBatch: TransitionBatch = {
-                let feats = (0..<stateWithCorrects.count).map({ featureProvider.features(for: states[stateWithCorrects[$0].stateIdx]!, sentence: workingExamples[stateWithCorrects[$0].stateIdx]!.sentence) })
+                let feats = stateWithCorrects.map({ featureProvider.features(for: states[$0.stateIdx]!) })
                 let embeddingInput = EmbeddingInput(indices: Tensor<Int32>(ShapedArray<Int32>(shape: [stateWithCorrects.count, feats[0].count], scalars: feats.flatMap({ $0 }))))
                 return TransitionBatch(
                     features: embeddingInput,
@@ -158,8 +154,8 @@ class TFParseTrainer {
                 )
             }()
             
-            let valids = (0..<stateWithCorrects.count).map({
-                states[stateWithCorrects[$0].stateIdx]!.validTransitions()
+            let valids = stateWithCorrects.map({
+                states[$0.stateIdx]!.validTransitions()
             })
             let guesses = model(transitionBatch.features) // predictions
             let bestGuesses = (0..<valids.count).map({ indexInBatch in

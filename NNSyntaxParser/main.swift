@@ -44,7 +44,7 @@ let epochs = 25
 
 // MARK: Model training
 let trainer = TFParseTrainer(serializer: serializer,
-                           explorationEpochThreshold: 2,
+                           explorationEpochThreshold: 1,
                            explorationProbability: 0.9,
                            regularizerParameter: 0.00000001,
                            featureProvider: featureProvider,

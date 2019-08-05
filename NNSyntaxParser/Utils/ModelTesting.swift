@@ -22,12 +22,13 @@ extension TFParserModel: ParserModel {
 }
 
 func test(parser: Parser, examples: [ParseExample]) -> Float {
-    var results = [Float]()
+    var corrects = 0
+    var totals = 0
     for example in examples {
         let answer = try! parser.parse(sentence: example.sentence)
-        let accuracy = Float(answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head && $0.element?.relationship == example.goldArcs[$0.offset]?.relationship }).count) / Float(answer.heads.count)
-        results.append(accuracy)
+        corrects += answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head && $0.element?.relationship == example.goldArcs[$0.offset]?.relationship }).count
+        totals += answer.heads.count
     }
 
-    return results.reduce(0, +) / Float(results.count)
+    return Float(corrects)/Float(totals)
 }
