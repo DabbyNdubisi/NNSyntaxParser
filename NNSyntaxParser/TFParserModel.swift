@@ -9,22 +9,6 @@
 import Foundation
 import TensorFlow
 
-// <NONE> + POSTags + Dependency relations
-let domainTokensVocabularySize = TransitionFeatureProvider.domainTokens.count
-let wordsVocabularySize = 400000
-let totalVocabularySize = (domainTokensVocabularySize + wordsVocabularySize)
-let numLabels = Transition.numberOfTransitions
-let dh: Int = 200 // hidden layer size
-let n_wFeatures: Int = 18 // number of word features
-let n_tFeatures: Int = 18 // number of tag features
-let n_lFeatures: Int = 12 // number of label features
-let n_Features: Int = n_wFeatures + n_tFeatures + n_lFeatures
-let embeddingDimension: Int = 50 // embedding vector dimension
-let w_WeightDimension: TensorShape = [n_wFeatures * embeddingDimension, dh]
-let t_WeightDimension: TensorShape = [n_tFeatures * embeddingDimension, dh]
-let l_WeightDimension: TensorShape = [n_lFeatures * embeddingDimension, dh]
-let bias_Dimension: TensorShape = [dh]
-
 struct TFParserModel: Layer {
     // Need to make sure look up table covers (words + tags + labels)
     var embeddingLayer: Embedding<Float>
