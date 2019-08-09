@@ -56,7 +56,7 @@ class TFParseTrainer {
             return (trainHistory, validationHistory)
         }
 
-        let optimizer = Adam(for: model, learningRate: 0.01)
+        let optimizer = Adam(for: model, learningRate: 0.001)
         var bestLas: Float = 0.0
         for epoch in startEpoch...epochs {
             let epochStartDate = Date()
@@ -72,7 +72,7 @@ class TFParseTrainer {
             
             // validate on validation set
             if let validationSet = validationSet {
-                var (validationAccuracy, validationLoss, validationBatchCount) = evaluate(on: validationSet, batchSize: validationSet.count, explorer: { guess, _ in guess })
+                var (validationAccuracy, validationLoss, validationBatchCount) = evaluate(on: validationSet, batchSize: validationSet.count, explorer: { _, correct in correct })
                 validationAccuracy /= Float(validationBatchCount)
                 validationLoss /= Float(validationBatchCount)
                 validationHistory.accuracyResults.append(validationAccuracy)
@@ -145,39 +145,41 @@ class TFParseTrainer {
                 print("*** \(ignoredSentencesCount) SENTENCES IGNORED SO FAR")
             }
             
-            var transitionBatch: TransitionBatch = {
-                let feats = stateWithCorrects.map({ featureProvider.features(for: states[$0.stateIdx]!) })
-                let embeddingInput = EmbeddingInput(indices: Tensor<Int32>(ShapedArray<Int32>(shape: [stateWithCorrects.count, feats[0].count], scalars: feats.flatMap({ $0 }))))
-                return TransitionBatch(
-                    features: embeddingInput,
-                    transitionLabels: Tensor<Int32>([0]) // will be set later
-                )
-            }()
-            
-            let valids = stateWithCorrects.map({
-                states[$0.stateIdx]!.validTransitions()
-            })
-            let guesses = model(transitionBatch.features) // predictions
-            let bestGuesses = (0..<valids.count).map({ indexInBatch in
-                valids[indexInBatch].max(by: { guesses[indexInBatch][$0.rawValue] < guesses[indexInBatch][$1.rawValue] })!
-            })
-            transitionBatch.transitionLabels = Tensor<Int32>((0..<stateWithCorrects.count).map({ indexInBatch in
-                return Int32(stateWithCorrects[indexInBatch].corrects.max(by: { guesses[indexInBatch][$0.rawValue] < guesses[indexInBatch][$1.rawValue] })!.rawValue)
-            }))
-            
-            let (loss, gradient) = lossWithGradient(batch: transitionBatch)
-            if let optimizer = optimizer {
-                optimizer.update(&model.allDifferentiableVariables, along: gradient)
-            }
-            let logits = model(transitionBatch.features)
-            epochAccuracy += accuracy(predictions: logits.argmax(squeezingAxis: 1), truths: transitionBatch.transitionLabels)
-            epochLoss += loss.scalarized()
-            batchCount += 1
-            
-            // apply transition to state
-            for i in 0 ..< stateWithCorrects.count {
-                let (stateIdx, _) = stateWithCorrects[i]
-                states[stateIdx]!.apply(transition: explorer(bestGuesses[i], Transition(rawValue: Int(transitionBatch.transitionLabels[i].scalar!))!))
+            if stateWithCorrects.count > 0 {
+                var transitionBatch: TransitionBatch = {
+                    let feats = stateWithCorrects.map({ featureProvider.features(for: states[$0.stateIdx]!) })
+                    let embeddingInput = EmbeddingInput(indices: Tensor<Int32>(ShapedArray<Int32>(shape: [stateWithCorrects.count, feats[0].count], scalars: feats.flatMap({ $0 }))))
+                    return TransitionBatch(
+                        features: embeddingInput,
+                        transitionLabels: Tensor<Int32>([0]) // will be set later
+                    )
+                }()
+                
+                let valids = stateWithCorrects.map({
+                    states[$0.stateIdx]!.validTransitions()
+                })
+                let guesses = model(transitionBatch.features) // predictions
+                let bestGuesses = (0..<valids.count).map({ indexInBatch in
+                    valids[indexInBatch].max(by: { guesses[indexInBatch][$0.rawValue] < guesses[indexInBatch][$1.rawValue] })!
+                })
+                transitionBatch.transitionLabels = Tensor<Int32>((0..<stateWithCorrects.count).map({ indexInBatch in
+                    return Int32(stateWithCorrects[indexInBatch].corrects.max(by: { guesses[indexInBatch][$0.rawValue] < guesses[indexInBatch][$1.rawValue] })!.rawValue)
+                }))
+                
+                let (loss, gradient) = lossWithGradient(batch: transitionBatch)
+                if let optimizer = optimizer {
+                    optimizer.update(&model.allDifferentiableVariables, along: gradient)
+                }
+                let logits = model(transitionBatch.features)
+                epochAccuracy += accuracy(predictions: logits.argmax(squeezingAxis: 1), truths: transitionBatch.transitionLabels)
+                epochLoss += loss.scalarized()
+                batchCount += 1
+                
+                // apply transition to state
+                for i in 0 ..< stateWithCorrects.count {
+                    let (stateIdx, _) = stateWithCorrects[i]
+                    states[stateIdx]!.apply(transition: explorer(bestGuesses[i], Transition(rawValue: Int(transitionBatch.transitionLabels[i].scalar!))!))
+                }
             }
             
             // update working to remove ignoredIndices and new terminal states batch

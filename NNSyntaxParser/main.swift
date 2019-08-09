@@ -37,15 +37,16 @@ print("populating token embeddings...")
 let vocabularyEmbeddings = EmbeddingsReader.dependencyEmbedding(from: GloveExtractor.extractedResourcePath)
 print("token embeddings populated")
 
-let featureProvider = vocabularyEmbeddings.featureProvider
-let serializer = ModelSerializer(location: FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("trained-models"))
+let batchSize = 4
+let epochs = 20
 
-let epochs = 25
+let featureProvider = vocabularyEmbeddings.featureProvider
+let serializer = ModelSerializer(location: FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("trained-models-batch-\(batchSize)"))
 
 // MARK: Model training
 let trainer = TFParseTrainer(serializer: serializer,
-                           explorationEpochThreshold: 1,
-                           explorationProbability: 0.9,
+                           explorationEpochThreshold: 10,
+                           explorationProbability: 1.0,
                            regularizerParameter: 0.00000001,
                            featureProvider: featureProvider,
                            model: TFParserModel(embeddings: vocabularyEmbeddings.embedding))
@@ -56,10 +57,10 @@ let trainExamples = UDReader.readTrainData()
 print("loading validtion examples...")
 let validationExamples = UDReader.readValidationData()
 print("training model with \(trainExamples.count) examples...")
-let (train, validation) = trainer.train(trainSet: trainExamples, validationSet: validationExamples, batchSize: 32, epochs: epochs, retrieveCheckpoint: true, saveCheckpoints: true)
+let (train, validation) = trainer.train(trainSet: trainExamples, validationSet: validationExamples, batchSize: batchSize, epochs: epochs, retrieveCheckpoint: true, saveCheckpoints: true)
 print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
 
-// MARK: - Plot training performance
+ MARK: - Plot training performance
 let plt = Python.import("matplotlib.pyplot")
 plt.figure(figsize: [12, 8])
 
@@ -94,7 +95,7 @@ print("testing done. Accuracy: \(accuracy * 100.0)%")
 //// MARK: - model conversion
 //let shouldConvert = true
 //if shouldConvert {
-//    let converter = MLParserModelConverter(model: savedModel!)
+//    let converter = MLParserModelConverter(model: bestModel!)
 //    let converted = try! converter.convertToMLModel()
 //    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
 //    try! converted.write(to: downloadsURL, options: .atomic)
