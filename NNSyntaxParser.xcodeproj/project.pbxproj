@@ -24,7 +24,6 @@
 		4EB3E6F422D83E0D00E03D77 /* DependencyEmbedding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EB3E6F322D83E0D00E03D77 /* DependencyEmbedding.swift */; };
 		4ECC78ED22D6CF0D00737904 /* UDEnglishExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ECC78EC22D6CF0D00737904 /* UDEnglishExtractor.swift */; };
 		4ECC78EF22D6D1A000737904 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ECC78EE22D6D1A000737904 /* Constants.swift */; };
-		4ECDE46922FE122E00E0A49D /* MLParserModel.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = 4ECDE46822FE122E00E0A49D /* MLParserModel.mlmodel */; };
 		4EE4716B22E3F94900B080A8 /* ParseExample.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EE4716A22E3F94900B080A8 /* ParseExample.swift */; };
 		4EF9BBBA22FB55F200DA2BD0 /* ArrayFeatureExtractor.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E55EF9222EA7DF800B56AC7 /* ArrayFeatureExtractor.pb.swift */; };
 		4EF9BBBB22FB55F200DA2BD0 /* BayesianProbitRegressor.pb.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E55EF8F22EA7DF800B56AC7 /* BayesianProbitRegressor.pb.swift */; };
@@ -222,7 +221,6 @@
 		4ECC781122D56DFD00737904 /* NNSyntaxParser.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NNSyntaxParser.entitlements; sourceTree = "<group>"; };
 		4ECC78EC22D6CF0D00737904 /* UDEnglishExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDEnglishExtractor.swift; sourceTree = "<group>"; };
 		4ECC78EE22D6D1A000737904 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
-		4ECDE46822FE122E00E0A49D /* MLParserModel.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; name = MLParserModel.mlmodel; path = ../../../Downloads/MLParserModel.mlmodel; sourceTree = "<group>"; };
 		4EE4716A22E3F94900B080A8 /* ParseExample.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParseExample.swift; sourceTree = "<group>"; };
 		4EFC146B22D915EA00B2DA6E /* UDReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UDReader.swift; sourceTree = "<group>"; };
 		4EFC14E422D96BDB00B2DA6E /* POSTag.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = POSTag.swift; sourceTree = "<group>"; };
@@ -374,7 +372,6 @@
 		4ECC780922D56DF300737904 /* NNSyntaxParser */ = {
 			isa = PBXGroup;
 			children = (
-				4ECDE46822FE122E00E0A49D /* MLParserModel.mlmodel */,
 				4ECC781122D56DFD00737904 /* NNSyntaxParser.entitlements */,
 				4E55EF2122EA739E00B56AC7 /* Model Conversion */,
 				4EE4716C22E3F98A00B080A8 /* Utils */,
@@ -629,7 +626,6 @@
 				4EF9BBC422FB55F200DA2BD0 /* GLMRegressor.pb.swift in Sources */,
 				4EF9BBC822FB55F200DA2BD0 /* LinkedModel.pb.swift in Sources */,
 				4E55EF2022EA736200B56AC7 /* ModelSaver.swift in Sources */,
-				4ECDE46922FE122E00E0A49D /* MLParserModel.mlmodel in Sources */,
 				4EFC14F922DE8B4700B2DA6E /* Parser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
