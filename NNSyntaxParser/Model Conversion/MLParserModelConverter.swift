@@ -271,14 +271,13 @@ private extension MLParserModelConverter {
         
         // cube layer
         func makeActivationlayer() -> CoreML_Specification_NeuralNetworkLayer {
-            var cubeLayer = CoreML_Specification_UnaryFunctionLayerParams()
-            cubeLayer.alpha = 3
-            cubeLayer.type = .power
+            var activation = CoreML_Specification_ActivationParams()
+            activation.reLu = CoreML_Specification_ActivationReLU()
             return nnLayer(
                 name: LayerName.activationHidden1,
                 inputNames: [LayerName.preActivationReshapeHidden1],
                 outputNames: [LayerName.activationHidden1],
-                layer: .unary(cubeLayer),
+                layer: .activation(activation),
                 inputDimensions: [[dh]],
                 outputDimensions: [[dh]]
             )
@@ -295,7 +294,7 @@ private extension MLParserModelConverter {
             makeActivationlayer(),
         ]
     }
-
+    
     func makeOutputLayer() -> [CoreML_Specification_NeuralNetworkLayer] {
         let innerProductLayer = makeInnerProductLayer(numInput: dh, numOutput: numLabels, weights: model.outputLayer.weight.transposed(), bias: model.outputLayer.bias.transposed())
         

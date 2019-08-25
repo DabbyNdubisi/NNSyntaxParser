@@ -14,7 +14,7 @@ struct TFParserModelHiddenLayer: Layer {
     var tagWeights: Tensor<Float> = Tensor<Float>(randomUniform: t_WeightDimension)
     var labelWeights: Tensor<Float> = Tensor<Float>(randomUniform: l_WeightDimension)
     var bias: Tensor<Float> = Tensor<Float>(zeros: bias_Dimension)
-    @noDerivative let activation: Dense<Float>.Activation = { $0 * $0 * $0 }
+    @noDerivative let activation: Dense<Float>.Activation = relu
     
     @differentiable
     func callAsFunction(_ input: Tensor<Float>) -> Tensor<Float> {
