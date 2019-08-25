@@ -36,7 +36,10 @@ func makeInnerProductLayer(numInput: Int, numOutput: Int, weights: Tensor<Float>
     innerProductLayer.outputChannels = UInt64(numOutput)
     innerProductLayer.weights = makeWeightParams(weights: weights.flattened())
     if let bias = bias {
+        innerProductLayer.hasBias_p = true
         innerProductLayer.bias = makeWeightParams(weights: bias.flattened())
+    } else {
+        innerProductLayer.hasBias_p = false
     }
     return innerProductLayer
 }
