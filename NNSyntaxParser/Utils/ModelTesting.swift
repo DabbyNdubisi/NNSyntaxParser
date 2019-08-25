@@ -21,14 +21,16 @@ extension TFParserModel: ParserModel {
     }
 }
 
-func test(parser: Parser, examples: [ParseExample]) -> Float {
-    var corrects = 0
+func test(parser: Parser, examples: [ParseExample]) -> (las: Float, uas: Float) {
+    var lasCorrects = 0
+    var uasCorrects = 0
     var totals = 0
     for example in examples {
         let answer = try! parser.parse(sentence: example.sentence)
-        corrects += answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head && $0.element?.relationship == example.goldArcs[$0.offset]?.relationship }).count
+        lasCorrects += answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head && $0.element?.relationship == example.goldArcs[$0.offset]?.relationship }).count
+        uasCorrects += answer.heads.enumerated().filter({ $0.element?.head == example.goldArcs[$0.offset]?.head }).count
         totals += answer.heads.count
     }
 
-    return Float(corrects)/Float(totals)
+    return (Float(lasCorrects)/Float(totals), Float(uasCorrects)/Float(totals))
 }

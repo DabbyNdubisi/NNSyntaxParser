@@ -77,7 +77,7 @@ print("training model with \(trainExamples.count) examples...")
 let (train, validation) = trainer.train(trainSet: trainExamples, validationSet: validationExamples, batchSize: batchSize, epochs: epochs, retrieveCheckpoint: true, saveCheckpoints: true)
 print("training done. Took \(Date().timeIntervalSince(startDate)/3600) hours")
 
- MARK: - Plot training performance
+// MARK: - Plot training performance
 let plt = Python.import("matplotlib.pyplot")
 plt.figure(figsize: [12, 8])
 
@@ -103,20 +103,20 @@ print("testing model...")
 print("loading test examples...")
 let testExamples = UDReader.readTestData().shuffled()
 print("testing model with \(testExamples.count) examples...")
-let accuracy = test(
+let (lasAccuracy, uasAccuracy) = test(
     parser: Parser(model: bestModel, featureProvider: featureProvider),
     examples: testExamples
 )
-print("testing done. Accuracy: \(accuracy * 100.0)%")
+print("testing done. LAS Accuracy: \(lasAccuracy * 100.0)%, UAS Accuracy: \(uasAccuracy * 100.0)")
 
 //// MARK: - model conversion
-//let shouldConvert = true
-//if shouldConvert {
-//    let converter = MLParserModelConverter(model: bestModel!)
-//    let converted = try! converter.convertToMLModel()
-//    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
-//    try! converted.write(to: downloadsURL, options: .atomic)
-//}
+let shouldConvert = true
+if shouldConvert {
+    let converter = MLParserModelConverter(model: bestModel)
+    let converted = try! converter.convertToMLModel()
+    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
+    try! converted.write(to: downloadsURL, options: .atomic)
+}
 
 // MARK: - test converted model
 //extension MLParserModel: ParserModel {
@@ -135,4 +135,4 @@ print("testing done. Accuracy: \(accuracy * 100.0)%")
 //    parser: Parser(model: MLParserModel(), featureProvider: featureProvider),
 //    examples: testExamples
 //)
-//print("testing converted done. Accuracy: \(convertedAccuracy * 100.0)%")
+//print("testing converted done. LAS Accuracy: \(convertedAccuracy.las * 100.0)%, UAS Accuracy: \(convertedAccuracy.uas * 100.0)")

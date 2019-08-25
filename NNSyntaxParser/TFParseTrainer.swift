@@ -80,11 +80,11 @@ class TFParseTrainer {
                 print("Epoch \(epoch): Validation Loss: \(validationLoss), Validation Accuracy: \(validationAccuracy)")
                 
                 let parser = Parser(model: model, featureProvider: featureProvider)
-                let devLas = test(parser: parser, examples: validationSet)
-                print("Epoch \(epoch) Validation LAS: \(devLas)")
+                let devAS = test(parser: parser, examples: validationSet)
+                print("Epoch \(epoch) Validation LAS: \(devAS.las), Validation UAS: \(devAS.uas)")
                 
-                if devLas > bestLas {
-                    bestLas = devLas
+                if devAS.las > bestLas {
+                    bestLas = devAS.las
                     
                     // save the new best model at this checkpoint
                     guard saveCheckpoints else { continue }
@@ -167,7 +167,10 @@ class TFParseTrainer {
                 }))
                 
                 let (loss, gradient) = lossWithGradient(batch: transitionBatch)
-                if let optimizer = optimizer {
+                let containsIncorrectGuessInBatch = (0..<bestGuesses.count).first(where: { batchIdx in
+                    stateWithCorrects[batchIdx].corrects.contains(bestGuesses[batchIdx]) == false
+                }) != nil
+                if let optimizer = optimizer, containsIncorrectGuessInBatch {
                     optimizer.update(&model.allDifferentiableVariables, along: gradient)
                 }
                 let logits = model(transitionBatch.features)
