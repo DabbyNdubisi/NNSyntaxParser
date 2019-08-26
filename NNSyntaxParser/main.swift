@@ -98,7 +98,7 @@ plt.show()
 
 // MARK: - Model testing
 print("retrieving best model")
-let bestModel = try! serializer.loadModel(name: TFParseTrainer.Constants.bestTrainedModelName)
+let bestModel = try! serializer.loadModel(name: TFParseTrainer.savedModelName(epoch: 12))
 print("testing model...")
 print("loading test examples...")
 let testExamples = UDReader.readTestData().shuffled()
@@ -111,28 +111,32 @@ print("testing done. LAS Accuracy: \(lasAccuracy * 100.0)%, UAS Accuracy: \(uasA
 
 //// MARK: - model conversion
 let shouldConvert = true
-if shouldConvert {
-    let converter = MLParserModelConverter(model: bestModel)
-    let converted = try! converter.convertToMLModel()
-    let downloadsURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
-    try! converted.write(to: downloadsURL, options: .atomic)
+guard shouldConvert else {
+    exit(0)
 }
 
+let converter = MLParserModelConverter(model: bestModel)
+let converted = try! converter.convertToMLModel()
+let convertedModelURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!.appendingPathComponent("MLParserModel").appendingPathExtension("mlmodel")
+try! converted.write(to: convertedModelURL, options: .atomic)
+
 // MARK: - test converted model
-//extension MLParserModel: ParserModel {
-//    func transitionProbabilities(for features: [Int32]) throws -> [Int : Float] {
-//        let arrayInput = try MLMultiArray(features)
-//        let prediction = try self.prediction(input: MLParserModelInput(parseState: arrayInput))
-//        return (0..<numLabels).reduce([Int:Float]()) {
-//            var result = $0
-//            result[$1] = prediction.outputTransitionLogits[[NSNumber(value: $1)]].floatValue
-//            return result
-//        }
-//    }
-//}
-//
-//let convertedAccuracy = test(
-//    parser: Parser(model: MLParserModel(), featureProvider: featureProvider),
-//    examples: testExamples
-//)
-//print("testing converted done. LAS Accuracy: \(convertedAccuracy.las * 100.0)%, UAS Accuracy: \(convertedAccuracy.uas * 100.0)")
+extension MLParserModel: ParserModel {
+    func transitionProbabilities(for features: [Int32]) throws -> [Int : Float] {
+        let arrayInput = try MLMultiArray(features)
+        let prediction = try self.prediction(input: MLParserModelInput(parseState: arrayInput))
+        return (0..<numLabels).reduce([Int:Float]()) {
+            var result = $0
+            result[$1] = prediction.outputTransitionLogits[[NSNumber(value: $1)]].floatValue
+            return result
+        }
+    }
+}
+
+let compiledModelURL = try! MLModel.compileModel(at: convertedModelURL)
+let convertedAccuracy = test(
+    parser: Parser(model: try! MLParserModel(contentsOf: compiledModelURL), featureProvider: featureProvider),
+    examples: testExamples
+)
+
+print("testing converted done. LAS Accuracy: \(convertedAccuracy.las * 100.0)%, UAS Accuracy: \(convertedAccuracy.uas * 100.0)")
