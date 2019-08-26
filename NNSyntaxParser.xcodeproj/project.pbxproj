@@ -150,38 +150,6 @@
 		4E55EF1922EA736200B56AC7 /* FileExtension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FileExtension.swift; sourceTree = "<group>"; };
 		4E55EF1A22EA736200B56AC7 /* ModelSaver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ModelSaver.swift; sourceTree = "<group>"; };
 		4E55EF2322EA79DE00B56AC7 /* SwiftProtobuf.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SwiftProtobuf.xcodeproj; path = "swift-protobuf/SwiftProtobuf.xcodeproj"; sourceTree = "<group>"; };
-		4E55EF3F22EA7DB800B56AC7 /* CustomModel.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = CustomModel.proto; sourceTree = "<group>"; };
-		4E55EF4022EA7DB800B56AC7 /* LICENSE.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
-		4E55EF4122EA7DB800B56AC7 /* OneHotEncoder.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = OneHotEncoder.proto; sourceTree = "<group>"; };
-		4E55EF4222EA7DB800B56AC7 /* VisionFeaturePrint.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = VisionFeaturePrint.proto; sourceTree = "<group>"; };
-		4E55EF4322EA7DB800B56AC7 /* Gazetteer.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = Gazetteer.proto; sourceTree = "<group>"; };
-		4E55EF4422EA7DB800B56AC7 /* TextClassifier.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = TextClassifier.proto; sourceTree = "<group>"; };
-		4E55EF4522EA7DB800B56AC7 /* ArrayFeatureExtractor.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = ArrayFeatureExtractor.proto; sourceTree = "<group>"; };
-		4E55EF4622EA7DB800B56AC7 /* WordTagger.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = WordTagger.proto; sourceTree = "<group>"; };
-		4E55EF4722EA7DB900B56AC7 /* WordEmbedding.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = WordEmbedding.proto; sourceTree = "<group>"; };
-		4E55EF4822EA7DB900B56AC7 /* Imputer.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = Imputer.proto; sourceTree = "<group>"; };
-		4E55EF4922EA7DB900B56AC7 /* DictVectorizer.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = DictVectorizer.proto; sourceTree = "<group>"; };
-		4E55EF4A22EA7DB900B56AC7 /* Normalizer.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = Normalizer.proto; sourceTree = "<group>"; };
-		4E55EF4B22EA7DB900B56AC7 /* Scaler.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = Scaler.proto; sourceTree = "<group>"; };
-		4E55EF4C22EA7DB900B56AC7 /* TreeEnsemble.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = TreeEnsemble.proto; sourceTree = "<group>"; };
-		4E55EF4D22EA7DB900B56AC7 /* ItemSimilarityRecommender.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = ItemSimilarityRecommender.proto; sourceTree = "<group>"; };
-		4E55EF4E22EA7DB900B56AC7 /* Identity.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = Identity.proto; sourceTree = "<group>"; };
-		4E55EF4F22EA7DB900B56AC7 /* FeatureTypes.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = FeatureTypes.proto; sourceTree = "<group>"; };
-		4E55EF5022EA7DB900B56AC7 /* SoundAnalysisPreprocessing.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = SoundAnalysisPreprocessing.proto; sourceTree = "<group>"; };
-		4E55EF5122EA7DB900B56AC7 /* CategoricalMapping.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = CategoricalMapping.proto; sourceTree = "<group>"; };
-		4E55EF5222EA7DB900B56AC7 /* NeuralNetwork.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = NeuralNetwork.proto; sourceTree = "<group>"; };
-		4E55EF5322EA7DB900B56AC7 /* README.rst */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.rst; sourceTree = "<group>"; };
-		4E55EF5422EA7DB900B56AC7 /* FeatureVectorizer.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = FeatureVectorizer.proto; sourceTree = "<group>"; };
-		4E55EF5522EA7DB900B56AC7 /* SVM.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = SVM.proto; sourceTree = "<group>"; };
-		4E55EF5622EA7DB900B56AC7 /* BayesianProbitRegressor.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = BayesianProbitRegressor.proto; sourceTree = "<group>"; };
-		4E55EF5722EA7DB900B56AC7 /* DataStructures.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = DataStructures.proto; sourceTree = "<group>"; };
-		4E55EF5822EA7DB900B56AC7 /* GLMClassifier.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = GLMClassifier.proto; sourceTree = "<group>"; };
-		4E55EF5922EA7DB900B56AC7 /* NearestNeighbors.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = NearestNeighbors.proto; sourceTree = "<group>"; };
-		4E55EF5A22EA7DB900B56AC7 /* LinkedModel.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = LinkedModel.proto; sourceTree = "<group>"; };
-		4E55EF5B22EA7DB900B56AC7 /* NonMaximumSuppression.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = NonMaximumSuppression.proto; sourceTree = "<group>"; };
-		4E55EF5C22EA7DB900B56AC7 /* Parameters.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = Parameters.proto; sourceTree = "<group>"; };
-		4E55EF5D22EA7DB900B56AC7 /* Model.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = Model.proto; sourceTree = "<group>"; };
-		4E55EF5E22EA7DB900B56AC7 /* GLMRegressor.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.protobuf; path = GLMRegressor.proto; sourceTree = "<group>"; };
 		4E55EF7E22EA7DF800B56AC7 /* Parameters.pb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Parameters.pb.swift; sourceTree = "<group>"; };
 		4E55EF7F22EA7DF800B56AC7 /* SoundAnalysisPreprocessing.pb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoundAnalysisPreprocessing.pb.swift; sourceTree = "<group>"; };
 		4E55EF8022EA7DF800B56AC7 /* NearestNeighbors.pb.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NearestNeighbors.pb.swift; sourceTree = "<group>"; };
@@ -253,7 +221,6 @@
 			isa = PBXGroup;
 			children = (
 				4E55EF7D22EA7DC100B56AC7 /* generated pb swift  */,
-				4E55EF3E22EA7A4A00B56AC7 /* protobuf spec */,
 				4E55EFBA22EA8C3600B56AC7 /* MLParserModelConverter.swift */,
 				4E50132922F26E9A0058404C /* ConversionHelpers.swift */,
 			);
@@ -272,45 +239,6 @@
 				4E55EF3A22EA79DE00B56AC7 /* SwiftProtobuf.framework */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		4E55EF3E22EA7A4A00B56AC7 /* protobuf spec */ = {
-			isa = PBXGroup;
-			children = (
-				4E55EF4522EA7DB800B56AC7 /* ArrayFeatureExtractor.proto */,
-				4E55EF5622EA7DB900B56AC7 /* BayesianProbitRegressor.proto */,
-				4E55EF5122EA7DB900B56AC7 /* CategoricalMapping.proto */,
-				4E55EF3F22EA7DB800B56AC7 /* CustomModel.proto */,
-				4E55EF5722EA7DB900B56AC7 /* DataStructures.proto */,
-				4E55EF4922EA7DB900B56AC7 /* DictVectorizer.proto */,
-				4E55EF4F22EA7DB900B56AC7 /* FeatureTypes.proto */,
-				4E55EF5422EA7DB900B56AC7 /* FeatureVectorizer.proto */,
-				4E55EF4322EA7DB800B56AC7 /* Gazetteer.proto */,
-				4E55EF5822EA7DB900B56AC7 /* GLMClassifier.proto */,
-				4E55EF5E22EA7DB900B56AC7 /* GLMRegressor.proto */,
-				4E55EF4E22EA7DB900B56AC7 /* Identity.proto */,
-				4E55EF4822EA7DB900B56AC7 /* Imputer.proto */,
-				4E55EF4D22EA7DB900B56AC7 /* ItemSimilarityRecommender.proto */,
-				4E55EF4022EA7DB800B56AC7 /* LICENSE.txt */,
-				4E55EF5A22EA7DB900B56AC7 /* LinkedModel.proto */,
-				4E55EF5D22EA7DB900B56AC7 /* Model.proto */,
-				4E55EF5922EA7DB900B56AC7 /* NearestNeighbors.proto */,
-				4E55EF5222EA7DB900B56AC7 /* NeuralNetwork.proto */,
-				4E55EF5B22EA7DB900B56AC7 /* NonMaximumSuppression.proto */,
-				4E55EF4A22EA7DB900B56AC7 /* Normalizer.proto */,
-				4E55EF4122EA7DB800B56AC7 /* OneHotEncoder.proto */,
-				4E55EF5C22EA7DB900B56AC7 /* Parameters.proto */,
-				4E55EF5322EA7DB900B56AC7 /* README.rst */,
-				4E55EF4B22EA7DB900B56AC7 /* Scaler.proto */,
-				4E55EF5022EA7DB900B56AC7 /* SoundAnalysisPreprocessing.proto */,
-				4E55EF5522EA7DB900B56AC7 /* SVM.proto */,
-				4E55EF4422EA7DB800B56AC7 /* TextClassifier.proto */,
-				4E55EF4C22EA7DB900B56AC7 /* TreeEnsemble.proto */,
-				4E55EF4222EA7DB800B56AC7 /* VisionFeaturePrint.proto */,
-				4E55EF4722EA7DB900B56AC7 /* WordEmbedding.proto */,
-				4E55EF4622EA7DB800B56AC7 /* WordTagger.proto */,
-			);
-			path = "protobuf spec";
 			sourceTree = "<group>";
 		};
 		4E55EF7D22EA7DC100B56AC7 /* generated pb swift  */ = {
