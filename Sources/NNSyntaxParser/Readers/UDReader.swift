@@ -9,6 +9,7 @@
 import Foundation
 import Python
 import NaturalLanguage
+import LanguageParseModels
 
 struct UDReader {
     private static var rootPrefix: String {

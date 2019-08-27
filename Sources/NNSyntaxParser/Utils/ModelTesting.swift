@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import LanguageParseModels
 import TensorFlow
 
 extension TFParserModel: ParserModel {

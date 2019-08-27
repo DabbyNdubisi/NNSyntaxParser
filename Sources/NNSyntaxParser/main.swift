@@ -11,6 +11,7 @@ import TensorFlow
 import CoreML
 import NaturalLanguage
 import Python
+import LanguageParseModels
 
 // MARK: - Configurations
 // <NONE> + POSTags + Dependency relations
@@ -98,7 +99,7 @@ plt.show()
 
 // MARK: - Model testing
 print("retrieving best model")
-let bestModel = try! serializer.loadModel(name: TFParseTrainer.savedModelName(epoch: 12))
+let bestModel = try! serializer.loadModel(name: TFParseTrainer.Constants.bestTrainedModelName)
 print("testing model...")
 print("loading test examples...")
 let testExamples = UDReader.readTestData().shuffled()

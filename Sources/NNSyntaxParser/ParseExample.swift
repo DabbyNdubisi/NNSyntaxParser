@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import LanguageParseModels
 
 /// sentence and expected dependency arcs
 /// for a single example

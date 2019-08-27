@@ -9,6 +9,7 @@
 import Foundation
 import TensorFlow
 import NaturalLanguage
+import LanguageParseModels
 
 class TFParseTrainer {
     enum Constants {

@@ -9,6 +9,7 @@
 import Foundation
 import TensorFlow
 import NaturalLanguage
+import LanguageParseModels
 
 struct DependencyEmbedding {
     let featureProvider: TransitionFeatureProvider
